@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { evaluarContrasena } from "@/core/acceso/fuerza";
+import { rutaDeRegreso } from "@/core/acceso/regreso";
 import { pedir } from "@/features/vacantes/cliente";
 import { Aviso, Boton, Tarjeta } from "@/ui/ui";
 import Medidor from "./Medidor";
@@ -14,10 +15,9 @@ interface EstadoAcceso {
   segundoPaso: boolean;
 }
 
-/** Solo rutas internas: un enlace «/entrar?volver=https://otro-sitio» no te saca de EmpleaTech. */
+/** Solo rutas internas: un enlace «/entrar?volver=…» no te saca de EmpleaTech (ver core/acceso/regreso). */
 function destino(): string {
-  const v = new URLSearchParams(window.location.search).get("volver") ?? "";
-  return v.startsWith("/") && !v.startsWith("//") && !v.startsWith("/entrar") ? v : "/hoy";
+  return rutaDeRegreso(new URLSearchParams(window.location.search).get("volver"), window.location.origin);
 }
 
 export default function Entrar() {
