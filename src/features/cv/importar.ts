@@ -1,4 +1,4 @@
-﻿import { decodificarEntidades } from "@/core/analisis/texto";
+﻿import { decodificarEntidades, sinEtiquetas } from "@/core/analisis/texto";
 import { limpiarTextoCv, lineasDesdeFragmentos, type FragmentoPdf } from "@/core/perfil/limpiar";
 
 export const MAX_BYTES = 5 * 1024 * 1024;
@@ -40,13 +40,14 @@ export function detectarFormato(nombre: string, cabecera: Uint8Array): FormatoCv
 export function textoDesdeOdtXml(xml: string): string {
   const cuerpo = /<office:text[\s>][\s\S]*<\/office:text>/.exec(xml)?.[0] ?? xml;
   return decodificarEntidades(
-    cuerpo
-      .replace(/<text:line-break\s*\/>/g, "\n")
-      .replace(/<text:tab\s*\/>/g, "\t")
-      .replace(/<text:s(?:\s+text:c="(\d+)")?\s*\/>/g, (_, n: string | undefined) => " ".repeat(Math.min(Number(n ?? 1), 20)))
-      .replace(/<text:list-item(?:\s[^>]*)?>/g, "- ")
-      .replace(/<\/text:(?:p|h)>/g, "\n")
-      .replace(/<[^>]+>/g, ""),
+    sinEtiquetas(
+      cuerpo
+        .replace(/<text:line-break\s*\/>/g, "\n")
+        .replace(/<text:tab\s*\/>/g, "\t")
+        .replace(/<text:s(?:\s+text:c="(\d+)")?\s*\/>/g, (_, n: string | undefined) => " ".repeat(Math.min(Number(n ?? 1), 20)))
+        .replace(/<text:list-item(?:\s[^>]*)?>/g, "- ")
+        .replace(/<\/text:(?:p|h)>/g, "\n"),
+    ),
   );
 }
 

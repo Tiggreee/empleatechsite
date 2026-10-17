@@ -31,6 +31,8 @@ describe("normalización de vacantes", () => {
     expect(htmlATexto("<p>Hola&nbsp;<b>mundo</b></p><ul><li>Node.js</li><li>SQL &amp; Docker</li></ul>")).toBe("Hola mundo\n\n- Node.js\n- SQL & Docker");
     expect(htmlATexto("&lt;p&gt;Escapado &amp;amp; bien&lt;/p&gt;")).toBe("Escapado & bien");
     expect(htmlATexto("<script>alert(1)</script><p>ok</p>")).toBe("ok");
+    // Quitar «<b>» de una sola pasada armaría un «<script>» nuevo; se quitan etiquetas hasta que no quede ninguna.
+    expect(htmlATexto("<<b>script>hola<</b>/script>")).toBe("hola");
   });
 
   it("salarios en texto libre", () => {

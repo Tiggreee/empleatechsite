@@ -1,4 +1,4 @@
-import { decodificarEntidades, prep } from "../analisis/texto";
+import { decodificarEntidades, prep, sinEtiquetas } from "../analisis/texto";
 import { paisesEnClave } from "./paises";
 
 /** Plataformas de donde vienen las vacantes. Cada una tiene su adaptador en src/server/fuentes. */
@@ -67,14 +67,15 @@ export interface Vacante {
 export function htmlATexto(html: string): string {
   // Algunas fuentes (Greenhouse) mandan el HTML escapado: &lt;p&gt;…
   const crudo = !/<[a-z/!]/i.test(html) && /&lt;[a-z/]/i.test(html) ? decodificarEntidades(html) : html;
-  const texto = crudo
-    .replace(/<(script|style|noscript)[\s\S]*?<\/\1>/gi, "")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<li[^>]*>/gi, "\n- ")
-    // </li> no agrega salto: el siguiente <li> ya abre su propia línea.
-    .replace(/<\/(p|div|ul|ol|h[1-6]|tr|section|article|blockquote)>/gi, "\n")
-    .replace(/<(p|div|h[1-6]|tr|section|article|blockquote)(\s[^>]*)?>/gi, "\n")
-    .replace(/<[^>]+>/g, "");
+  const texto = sinEtiquetas(
+    crudo
+      .replace(/<(script|style|noscript)[\s\S]*?<\/\1>/gi, "")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<li[^>]*>/gi, "\n- ")
+      // </li> no agrega salto: el siguiente <li> ya abre su propia línea.
+      .replace(/<\/(p|div|ul|ol|h[1-6]|tr|section|article|blockquote)>/gi, "\n")
+      .replace(/<(p|div|h[1-6]|tr|section|article|blockquote)(\s[^>]*)?>/gi, "\n"),
+  );
   return decodificarEntidades(texto)
     .replace(/\r\n?/g, "\n")
     .split("\n")

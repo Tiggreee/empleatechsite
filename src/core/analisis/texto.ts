@@ -73,6 +73,19 @@ const ENTIDADES: Record<string, string> = {
   Aacute: "Á", Eacute: "É", Iacute: "Í", Oacute: "Ó", Uacute: "Ú", Ntilde: "Ñ", uuml: "ü", euro: "€", copy: "©", reg: "®",
 };
 
+/**
+ * Quita etiquetas HTML/XML hasta que no quede ninguna. Una sola pasada no basta: en «<<b>script>», quitar «<b>» arma
+ * un «<script>» nuevo.
+ */
+export function sinEtiquetas(s: string): string {
+  let antes: string;
+  do {
+    antes = s;
+    s = s.replace(/<[^<>]*>/g, "");
+  } while (s !== antes);
+  return s;
+}
+
 /** Entidades de HTML/XML a texto («&amp;», «&#233;», «&#x2014;»); las desconocidas se quedan como vienen. */
 export function decodificarEntidades(s: string): string {
   return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) => {
