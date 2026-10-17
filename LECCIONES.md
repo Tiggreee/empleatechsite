@@ -15,3 +15,16 @@ siguiente plan.
   dio; lo que declare a mano manda, y en un formulario nunca se afirma más de lo que el CV o la persona dicen.
 - **Semanas construyendo y cero postulaciones.** La métrica que importa (respuestas, entrevistas) no se mueve sin uso
   real: primero se usa y se mide, después se construye.
+
+## 2026-10-17 · Auditoría antes de la primera postulación
+
+- **El CI volvió a quedar en rojo cuatro días sin que nadie lo viera.** La regla de `main` existía, pero el push
+  directo como administrador se la saltaba. Desde ahora todo entra por PR y se espera el CI antes de mergear.
+- **La prueba «inestable» era un bug real.** Al soltar la tarjeta, la distancia salía del último render de React; en un
+  deslizamiento rápido el dedo se levanta antes y la decisión se perdía. Antes de culpar al azar, buscar la carrera.
+- **Guardar todo el estado funcionaba con un solo escritor.** Con la extensión como segundo, una pestaña con datos
+  viejos borraba la postulación recién registrada. Se escribe solo lo que cambió, renglón por renglón.
+- **Un 100 sin evidencia.** «Partner Development Manager» salía primero por inglés y liderazgo, sin ninguna herramienta
+  técnica. La afinidad necesita una base mínima antes de valer como prioridad.
+- **«US-REMOTE; CA-TOR» no se leía como país**, así que vacantes que exigen vivir en EE. UU. pasaban el filtro. Revisar
+  la cola con ojos de usuario encontró en minutos lo que las pruebas no cubrían.
