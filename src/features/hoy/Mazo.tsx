@@ -32,8 +32,11 @@ export default function Mazo({ items, ahora, ocupado, onEnviada, onSaltar }: Pro
   const proyecto = v.vacante.tipo === "proyecto";
   const r = v.resumen;
 
-  const soltar = async () => {
-    const d = dx;
+  const soltar = async (x: number) => {
+    if (inicio.current === null) return;
+    // La distancia sale del evento, no del último render: en un deslizamiento rápido el dedo se levanta antes de que
+    // React pinte el último movimiento, y con `dx` la decisión se perdía.
+    const d = x - inicio.current;
     inicio.current = null;
     setDx(0);
     if (d <= -UMBRAL) await onSaltar(v);
@@ -49,7 +52,7 @@ export default function Mazo({ items, ahora, ocupado, onEnviada, onSaltar }: Pro
     onPointerMove: (e: PointerEvent<HTMLElement>) => {
       if (inicio.current !== null) setDx(e.clientX - inicio.current);
     },
-    onPointerUp: () => void soltar(),
+    onPointerUp: (e: PointerEvent<HTMLElement>) => void soltar(e.clientX),
     onPointerCancel: () => {
       inicio.current = null;
       setDx(0);
