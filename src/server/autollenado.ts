@@ -11,7 +11,7 @@ import type { PerfilJson } from "@/core/perfil/estructurado";
 import { cvActivo, estructuradoDe } from "@/core/perfil/perfil";
 import { SELLO_ITEMS, analizarOferta, crear, marcarPostulada } from "@/core/seguimiento/seguimiento";
 import type { Vacante } from "@/core/vacantes/vacante";
-import { loadState, saveState } from "./app-state";
+import { aplicarCambios, loadState } from "./app-state";
 import { getPool } from "./db";
 import { cartaAPdf, cvAPdf } from "./pdf";
 import { ErrorVacantes } from "./vacantes";
@@ -142,8 +142,9 @@ export async function registrarEnvio(url: string, tituloPagina: string, ahora = 
   const cv = cvActivo(perfil);
   const id = crypto.randomUUID();
   const oferta = vacante && cv ? analizarOferta(cv.texto, `${vacante.titulo}\n${vacante.descripcion}`, cv.id, ahora) : undefined;
-  const lista = marcarPostulada(crear(postulaciones, { empresa, puesto, url: destino, oferta }, ahora, id), id, [...SELLO_ITEMS], ahora);
-  await saveState({ perfil, postulaciones: lista });
+  const nueva = marcarPostulada(crear([], { empresa, puesto, url: destino, oferta }, ahora, id), id, [...SELLO_ITEMS], ahora);
+  // Solo esta postulación: lo que tengas abierto en otra pestaña no se toca.
+  await aplicarCambios({ postulaciones: { guardar: nueva, borrar: [] } });
   if (vacante) await getPool().query(`update vacantes set estado = 'guardada', actualizada_en = now() where profile_id = $1 and id = $2`, [APP_PROFILE_ID, vacante.id]);
   return { registrada: true, empresa, puesto };
 }

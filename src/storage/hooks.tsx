@@ -1,14 +1,10 @@
 ﻿"use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { PERFIL_VACIO, sanitizarPerfil, type EstadoPerfil } from "@/core/perfil/perfil";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { cambiosEntre, hayCambios, type CambiosEstado, type EstadoApp } from "@/core/estado/cambios";
+import { PERFIL_VACIO, sanitizarPerfil } from "@/core/perfil/perfil";
 import { sanitizar, type Postulacion } from "@/core/seguimiento/seguimiento";
 import { borrarEstadoLocal, guardarEstadoLocal, leerEstadoLocal } from "./almacenes";
-
-interface EstadoApp {
-  perfil: EstadoPerfil;
-  postulaciones: Postulacion[];
-}
 
 interface ContextoDatos extends EstadoApp {
   cargando: boolean;
@@ -50,11 +46,13 @@ async function leerServidor(): Promise<EstadoApp> {
   return normalizar((await res.json()) as EstadoApp);
 }
 
-async function escribirServidor(payload: EstadoApp): Promise<EstadoApp> {
+/** Manda solo lo que cambió; el servidor responde con tus datos completos (incluido lo que otra pestaña o la extensión
+ *  guardaron mientras tanto). */
+async function escribirServidor(cambios: CambiosEstado): Promise<EstadoApp> {
   const res = await fetch("/api/state", {
-    method: "PUT",
+    method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(cambios),
   });
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -76,8 +74,11 @@ export function DatosProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [copiaLocal, setCopiaLocal] = useState(false);
   const [sesionVencida, setSesionVencida] = useState(false);
+  // Lo último que dijo el servidor: guardar compara contra esto y manda solo la diferencia.
+  const base = useRef<EstadoApp>(normalizar(null));
 
   const aplicarEstado = useCallback((estado: EstadoApp) => {
+    base.current = estado;
     setPerfil(estado.perfil);
     setPostulaciones(estado.postulaciones);
     setCopiaLocal(false);
@@ -107,7 +108,9 @@ export function DatosProvider({ children }: { children: ReactNode }) {
       perfil: siguiente.perfil ?? perfil,
       postulaciones: siguiente.postulaciones ?? postulaciones,
     });
-    const guardado = await escribirServidor(payload);
+    const cambios = cambiosEntre(base.current, payload);
+    if (!hayCambios(cambios)) return payload;
+    const guardado = await escribirServidor(cambios);
     setError(null);
     return aplicarEstado(guardado);
   }, [aplicarEstado, perfil, postulaciones]);
@@ -119,6 +122,7 @@ export function DatosProvider({ children }: { children: ReactNode }) {
       throw new Error(body?.error ?? "No se pudieron borrar los datos guardados.");
     }
     borrarEstadoLocal();
+    base.current = normalizar(null);
     setPerfil(PERFIL_VACIO);
     setPostulaciones([]);
     setError(null);
@@ -138,7 +142,7 @@ export function DatosProvider({ children }: { children: ReactNode }) {
         const remoto = await leerServidor();
         if (!activo) return;
         if (estaVacio(remoto) && !estaVacio(semillaLocal)) {
-          const migrado = await escribirServidor(semillaLocal);
+          const migrado = await escribirServidor(cambiosEntre(remoto, semillaLocal));
           if (!activo) return;
           aplicarEstado(migrado);
         } else {
@@ -157,6 +161,15 @@ export function DatosProvider({ children }: { children: ReactNode }) {
       activo = false;
     };
   }, [aplicarEstado, fallo]);
+
+  // Al volver a esta pestaña (por ejemplo, después de postular con la extensión) se ve lo último del servidor.
+  useEffect(() => {
+    const alVolver = () => {
+      if (document.visibilityState === "visible" && !cargando) void recargar().catch(() => undefined);
+    };
+    document.addEventListener("visibilitychange", alVolver);
+    return () => document.removeEventListener("visibilitychange", alVolver);
+  }, [cargando, recargar]);
 
   const valor = useMemo<ContextoDatos>(() => ({
     perfil,

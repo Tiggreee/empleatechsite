@@ -1,9 +1,10 @@
+import { sanitizarCambios } from "@/core/estado/cambios";
 import { leerJson, ok, respuestaError } from "@/server/api";
-import { clearState, loadState, saveState, type EstadoPersistido } from "@/server/app-state";
+import { aplicarCambios, clearState, loadState } from "@/server/app-state";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-const MAX_BYTES_ESTADO = 1_000_000;
+const MAX_BYTES_CAMBIOS = 1_000_000;
 
 export async function GET() {
   try {
@@ -13,10 +14,10 @@ export async function GET() {
   }
 }
 
-export async function PUT(request: Request) {
+/** Solo lo que cambió (ver core/estado/cambios); responde con tus datos completos ya al día. */
+export async function PATCH(request: Request) {
   try {
-    const body = (await leerJson(request, MAX_BYTES_ESTADO)) as Partial<EstadoPersistido>;
-    return ok(await saveState(body));
+    return ok(await aplicarCambios(sanitizarCambios(await leerJson(request, MAX_BYTES_CAMBIOS))));
   } catch (error) {
     return respuestaError(error);
   }
