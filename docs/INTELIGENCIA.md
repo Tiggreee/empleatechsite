@@ -3,8 +3,8 @@
 ## De dónde sale la app
 
 - **Del recon competitivo**: la idea de contrastar herramientas de búsqueda de empleo con evidencia pública y una tabla que no inventa capacidades.
-- **Del prototipo previo**: el analizador CV?oferta, el radar y el tracker base.
-- **De esta iteración**: persistencia real en Postgres local para que el historial personal también sirva como dataset práctico.
+- **Del prototipo previo**: el analizador CV→oferta, el radar y el tracker base.
+- **De esta iteración**: persistencia real en Postgres (Neon en producción, Docker en local) para que el historial personal también sirva como dataset práctico.
 
 ## Qué cambió en esta versión
 

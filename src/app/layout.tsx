@@ -39,7 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </div>
           <footer className="border-t-2 border-texto px-5 py-6 text-center font-mono text-xs text-tenue">
             <p>{APP_NAME} no envía postulaciones por ti. Tú decides qué guardar, qué descartar y qué enviar.</p>
-            <p className="mx-auto mt-2 max-w-3xl">Tus CVs, ofertas guardadas y postulaciones viven en tu propia base de Postgres para que puedas revisarlos, exportarlos y analizarlos después con SQL.</p>
+            <p className="mx-auto mt-2 max-w-3xl">Tus CVs, ofertas guardadas y postulaciones viven en tu propia base de datos, solo para ti. Puedes exportarlos o borrarlos cuando quieras.</p>
             <p className="mt-3">
               <a href="/privacidad" className="uppercase tracking-widest underline underline-offset-4 hover:text-texto">
                 Privacidad

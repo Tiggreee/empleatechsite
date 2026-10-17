@@ -59,7 +59,7 @@ export default function Analizar() {
       await guardarEstado({ perfil: nuevo });
       setUsarOtro(false);
       setCvManual("");
-      setMsg({ tono: "ok", texto: "CV guardado en tu base local." });
+      setMsg({ tono: "ok", texto: "CV guardado." });
     } catch (e) {
       setMsg({ tono: "riesgo", texto: e instanceof Error ? e.message : "No se pudo guardar el CV." });
     }
@@ -96,7 +96,7 @@ export default function Analizar() {
     <main className="mx-auto max-w-6xl px-5 py-10">
       <Encabezado
         titulo="Analizar una oferta"
-        descripcion="Pega la oferta y compárala con tu CV: afinidad explicada, brechas y señales de riesgo. Al guardar, el resultado pasa a tu base local."
+        descripcion="Pega la oferta y compárala con tu CV: afinidad explicada, brechas y señales de riesgo. Al guardarla, el resultado pasa a tus postulaciones."
         acciones={
           <>
             <Boton variante="secundario" onClick={() => { setCvManual(CV_EJEMPLO); setUsarOtro(true); setOferta(OFERTA_EJEMPLO); }}>Cargar ejemplo</Boton>
@@ -129,7 +129,7 @@ export default function Analizar() {
               ) : (
                 <p className="font-medium">{cvGuardado.nombre}</p>
               )}
-              <p className="mt-2 text-xs text-tenue">{cvGuardado.texto.length.toLocaleString("es-MX")} caracteres guardados en tu base local. <Link href="/cv" className="text-cian underline underline-offset-4">Editar</Link></p>
+              <p className="mt-2 text-xs text-tenue">{cvGuardado.texto.length.toLocaleString("es-MX")} caracteres guardados. <Link href="/cv" className="text-cian underline underline-offset-4">Editar</Link></p>
             </div>
           ) : (
             <div className="space-y-3">

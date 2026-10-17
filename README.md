@@ -19,9 +19,15 @@ Buscar trabajo hoy significa mandar cientos de aplicaciones a ciegas, sin saber 
 
 Después de meses buscando empleo activamente y mandando cientos de aplicaciones, la conclusión fue simple: las herramientas que existen o son caras, o están pensadas para otro mercado, o no protegen al usuario de ofertas abusivas. EmpleaTech es un intento honesto de resolver eso, construido y probado con datos y aplicaciones reales, no con datos de ejemplo.
 
+## Cómo está hecho
+
+Next.js 16, React 19, TypeScript y Tailwind 4; Postgres (Neon) con SQL plano; desplegado en Vercel, con una extensión de
+Chrome (MV3) que llena los formularios. Capas separadas y vigiladas por pruebas, CI con pruebas unitarias y end-to-end en
+cada cambio. Detalles en [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md).
+
 ## Estado del proyecto
 
-Es un MVP funcional en desarrollo activo, en validación con uso real antes de pensar en nada más.
+En producción en https://empleatech.site y en uso real para una búsqueda de empleo activa.
 
 ---
 

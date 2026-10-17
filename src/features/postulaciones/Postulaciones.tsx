@@ -69,7 +69,7 @@ export default function Postulaciones() {
     <main className="mx-auto max-w-7xl px-5 py-10">
       <Encabezado
         titulo="Mis postulaciones"
-        descripcion="Tu tracker vive en la base local: prioridad, estado, notas, seguimiento y exportación."
+        descripcion="Tu tracker: prioridad, estado, notas, seguimiento y exportación."
         acciones={<EnlaceBoton href="/analizar">Analizar una oferta</EnlaceBoton>}
       />
 
