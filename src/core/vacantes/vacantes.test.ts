@@ -3,7 +3,7 @@ import { RESPUESTAS_VACIAS, sanitizarRespuestas } from "../perfil/respuestas";
 import { buscarVacantes, coincidePalabras, deduplicar, huellaPuntaje, ordenar, palabrasDeLaBusqueda, pasaFiltros, puntuar, terminosDelCv } from "./busqueda";
 import { INFO_FUENTES, type Consulta, type ContextoFuente, type FuenteVacantes } from "./fuentes";
 import { paisesDeTexto } from "./paises";
-import { atsDeUrl, claveDuplicado, crearVacante, htmlATexto, modalidadDeTexto, salarioDeTexto, type Vacante } from "./vacante";
+import { atsDeUrl, claveDuplicado, completarVacante, crearVacante, htmlATexto, modalidadDeTexto, salarioDeTexto, type Vacante } from "./vacante";
 
 const AHORA = new Date("2026-09-28T12:00:00Z");
 
@@ -221,6 +221,38 @@ describe("casos encontrados con datos reales", () => {
     expect(coincidePalabras(v({ titulo: "Desarrollador Java Sr" }), ["Java Software Engineer"])).toBe(true);
     expect(coincidePalabras(v({ titulo: "Java Developer (Spring)" }), ["Java Software Engineer"])).toBe(true);
     expect(coincidePalabras(v({ titulo: "Software Engineer, Payments" }), ["Java Software Engineer"])).toBe(false);
+  });
+
+  it("ubicaciones en clave de país: «US-REMOTE; US-CHICAGO; CA-TOR» pide vivir en EE. UU. o Canadá", () => {
+    expect(paisesDeTexto("US-REMOTE; US-CHICAGO; US-ATLANTA; CA-TOR").paises).toEqual(["CA", "US"]);
+    expect(paisesDeTexto("US").paises).toEqual(["US"]);
+    expect(paisesDeTexto("San Jose, CA").paises).toEqual(["US"]);
+    expect(paisesDeTexto("Join us remotely").paises).toEqual([]);
+    // Las que ya estaban guardadas se corrigen al volver a puntuar.
+    const stripe = { ...v({ fuente: "greenhouse", titulo: "Partner Development Manager" }), ubicacion: "US-REMOTE; US-CHICAGO; CA-TOR", paises: [] };
+    expect(completarVacante(stripe).paises).toEqual(["CA", "US"]);
+  });
+
+  it("«In-person» en el título es presencial aunque la plataforma diga remoto", () => {
+    expect(modalidadDeTexto("In-person Java Trainer for IT Graduates")).toBe("presencial");
+    expect(v({ titulo: "In-person Java Trainer for IT Graduates", modalidad: "remoto" }).modalidad).toBe("presencial");
+    expect(v({ titulo: "Java Developer", modalidad: "remoto" }).modalidad).toBe("remoto");
+  });
+
+  it("un puesto que no pide herramientas técnicas no sale arriba por inglés y liderazgo", () => {
+    const cv = "Líder técnico bilingüe. Inglés C2. Liderazgo de equipos. Java, Spring Boot, Kafka, React y OCI.";
+    const negocio = puntuar(v({ titulo: "Partner Development Manager", descripcion: "Fluent English required. Leadership and negotiation skills. Stakeholder management." }), cv, RESPUESTAS_VACIAS, AHORA);
+    expect(negocio.prioridad.valor).toBeLessThanOrEqual(15);
+    expect(negocio.prioridad.factores.join(" ")).toMatch(/ninguna herramienta técnica/);
+    const una = puntuar(v({ titulo: "Java Trainer", descripcion: "Teach Java to graduates. Fluent English and leadership." }), cv, RESPUESTAS_VACIAS, AHORA);
+    expect(una.prioridad.valor).toBeLessThanOrEqual(55);
+    const tecnica = puntuar(v({ titulo: "Backend Engineer", descripcion: "Java, Spring Boot and Kafka. Fluent English." }), cv, RESPUESTAS_VACIAS, AHORA);
+    expect(tecnica.prioridad.valor).toBeGreaterThan(55);
+  });
+
+  it("busca con todas tus herramientas: HTML, CSS y JavaScript también, aunque los menciones menos", () => {
+    const cv = "Java, Java, Java. Spring Boot, Spring Boot. Kafka, Kafka. React, React. Kotlin. PostgreSQL. Python. HTML, CSS y JavaScript.";
+    expect(terminosDelCv(cv)).toEqual(expect.arrayContaining(["html", "css", "javascript"]));
   });
 
   it("en el tablero oficial de la empresa una vacante antigua sigue abierta", () => {

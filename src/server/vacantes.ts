@@ -19,7 +19,7 @@ import {
 } from "@/core/vacantes/busqueda";
 import { oportunidades, type Oportunidad } from "@/core/vacantes/oportunidades";
 import { consultaDe, preferenciasIniciales, sanitizarPreferencias, type PreferenciasBusqueda } from "@/core/vacantes/preferencias";
-import { FUENTES, type FuenteId, type Vacante } from "@/core/vacantes/vacante";
+import { FUENTES, completarVacante, type FuenteId, type Vacante } from "@/core/vacantes/vacante";
 import type { Prioridad } from "@/core/seguimiento/prioridad";
 import { ajustePorAprendizaje, huellaAprendizaje } from "@/core/aprendizaje/aprendizaje";
 import { calcularAprendizaje } from "./aprendizaje";
@@ -105,12 +105,13 @@ export async function repuntuarSiCambio(ahora = new Date()): Promise<number> {
   if (!rows.length) return 0;
   await withTransaction(async (client) => {
     for (const r of rows) {
-      const v = r.datos_json as Vacante;
+      // Las guardadas antes de que se dedujeran modalidad y países del título y la ubicación se corrigen aquí.
+      const v = completarVacante(r.datos_json as Vacante);
       const p = puntuar(v, cv.texto, respuestas, ahora, ajustePorAprendizaje(aprendizaje, v));
       await client.query(
-        `update vacantes set resumen_json = $3::jsonb, prioridad_json = $4::jsonb, score = $5, huella = $6, actualizada_en = now()
+        `update vacantes set datos_json = $3::jsonb, resumen_json = $4::jsonb, prioridad_json = $5::jsonb, score = $6, huella = $7, actualizada_en = now()
           where profile_id = $1 and id = $2`,
-        [APP_PROFILE_ID, r.id, JSON.stringify(p.resumen), JSON.stringify(p.prioridad), p.prioridad.valor, huella],
+        [APP_PROFILE_ID, r.id, JSON.stringify(v), JSON.stringify(p.resumen), JSON.stringify(p.prioridad), p.prioridad.valor, huella],
       );
     }
   });

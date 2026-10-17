@@ -73,6 +73,20 @@ const REGIONES: [RegExp, string[]][] = [
 /** Sin restricción de país: la vacante acepta gente de cualquier lugar. */
 const MUNDIAL = /\b(worldwide|anywhere|global|cualquier (lugar|pais)|en todo el mundo)\b/;
 
+const CODIGOS = new Set(Object.values(NOMBRES));
+
+/**
+ * Países escritos en clave, como los ponen los tableros de las empresas: «US-REMOTE; US-CHICAGO; CA-TOR» o «US» solo.
+ * Se leen del texto original (en mayúsculas): «us» en minúsculas es una palabra en inglés, y «, CA» es California.
+ */
+export function paisesEnClave(texto: string | undefined | null): string[] {
+  if (!texto) return [];
+  const out = new Set<string>();
+  for (const m of texto.matchAll(/\b([A-Z]{2})-[A-Z]{2,}/g)) if (CODIGOS.has(m[1])) out.add(m[1]);
+  if (/(^|[^A-Za-z])US([^A-Za-z]|$)/.test(texto)) out.add("US");
+  return [...out].sort();
+}
+
 export interface PaisesDeTexto {
   paises: string[];
   mundial: boolean;
@@ -100,6 +114,7 @@ export function paisesDeTexto(...textos: (string | undefined | null)[]): PaisesD
       }
     }
     for (const m of t.matchAll(/,\s*([A-Z]{2})\b/g)) if (ESTADOS_EEUU.has(m[1])) out.add("US");
+    for (const p of paisesEnClave(t)) out.add(p);
     if (!REMOTO.test(f)) {
       for (let i = 0; i < palabras.length; i++) {
         for (let n = 3; n >= 1; n--) {
