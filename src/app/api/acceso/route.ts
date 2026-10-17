@@ -4,14 +4,11 @@ import { ErrorHttp, leerJson, respuestaError } from "@/server/api";
 import { hashear, verificar } from "@/server/contrasena";
 import { crearCuenta, leerCuenta } from "@/server/cuenta";
 import { comprobarSegundoFactor, conPaso2, conSesion, palabrasDelSitio, sesionVigente, sinCache, sinSesion } from "@/server/dosPasos";
-import { apartarIntento, ipDeCliente, limpiarIntentos } from "@/server/intentos";
+import { CLAVE_CODIGOS, apartarOBloquear as apartar, ipDeCliente, limpiarIntentos } from "@/server/intentos";
 import { accesoConContrasena, crearToken, secretoDeSesion } from "@/server/sesion";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-/** Los códigos de la app se cuentan por cuenta (no por IP): para llegar ahí ya hizo falta tu contraseña. */
-const CLAVE_CODIGOS = "cuenta:2fa";
 
 /** El código de un solo uso se compara en tiempo constante (sobre su huella, para que midan lo mismo). */
 function codigoCorrecto(dado: unknown): boolean {
@@ -19,11 +16,6 @@ function codigoCorrecto(dado: unknown): boolean {
   if (esperado.length < 16 || typeof dado !== "string") return false;
   const h = (s: string) => createHash("sha256").update(s).digest();
   return timingSafeEqual(h(dado.trim()), h(esperado));
-}
-
-async function apartar(clave: string) {
-  const espera = await apartarIntento(clave);
-  if (espera) throw new ErrorHttp(429, `Demasiados intentos. Espera ${espera} min.`);
 }
 
 export async function GET(request: Request) {

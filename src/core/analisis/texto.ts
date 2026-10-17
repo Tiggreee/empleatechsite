@@ -66,3 +66,18 @@ export function recortar(s: string, max = 160): string {
   const t = s.replace(/\s+/g, " ").trim();
   return t.length > max ? `${t.slice(0, max - 1).trimEnd()}…` : t;
 }
+
+const ENTIDADES: Record<string, string> = {
+  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", ndash: "–", mdash: "—", hellip: "…", rsquo: "’", lsquo: "‘",
+  rdquo: "”", ldquo: "“", bull: "•", middot: "·", aacute: "á", eacute: "é", iacute: "í", oacute: "ó", uacute: "ú", ntilde: "ñ",
+  Aacute: "Á", Eacute: "É", Iacute: "Í", Oacute: "Ó", Uacute: "Ú", Ntilde: "Ñ", uuml: "ü", euro: "€", copy: "©", reg: "®",
+};
+
+/** Entidades de HTML/XML a texto («&amp;», «&#233;», «&#x2014;»); las desconocidas se quedan como vienen. */
+export function decodificarEntidades(s: string): string {
+  return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) => {
+    if (e[0] !== "#") return ENTIDADES[e] ?? ENTIDADES[e.toLowerCase()] ?? m;
+    const cp = e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+    return Number.isFinite(cp) && cp > 0 && cp <= 0x10ffff ? String.fromCodePoint(cp) : "";
+  });
+}

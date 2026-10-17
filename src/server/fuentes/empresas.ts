@@ -1,6 +1,7 @@
+import { decodificarEntidades } from "@/core/analisis/texto";
 import { INFO_FUENTES, type Consulta, type ContextoFuente, type FuenteDeEmpresas, type FuenteVacantes } from "@/core/vacantes/fuentes";
 import { paisesDeTexto } from "@/core/vacantes/paises";
-import { crearVacante, decodificarEntidades, fechaIso, htmlATexto, modalidadDeTexto, salarioDeTexto, type Modalidad, type Vacante } from "@/core/vacantes/vacante";
+import { crearVacante, fechaIso, htmlATexto, modalidadDeTexto, salarioDeTexto, type Modalidad, type Vacante } from "@/core/vacantes/vacante";
 import { arr, definidas, nombreDeTablero, num, obj, str, strs } from "./json";
 
 const MAX_EMPRESAS = 25;

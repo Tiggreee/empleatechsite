@@ -20,6 +20,7 @@ import {
   type Respuestas,
 } from "@/core/perfil/respuestas";
 import { useDatosApp } from "@/storage/hooks";
+import { useGuardarConAviso } from "@/ui/guardar";
 import { Aviso, Boton, Encabezado, EnlaceBoton, Insignia, Tarjeta, Vacio } from "@/ui/ui";
 import EditorPerfil from "./EditorPerfil";
 
@@ -217,19 +218,10 @@ function FormRespuestas({ inicial, cv, onGuardar }: { inicial: Respuestas; cv: P
 
 export default function MiPerfil() {
   const { perfil, guardarEstado, cargando } = useDatosApp();
-  const [msg, setMsg] = useState<{ tono: "ok" | "riesgo"; texto: string } | null>(null);
+  const { msg, guardar } = useGuardarConAviso();
   const activo = cvActivo(perfil);
   const cv = activo ? estructuradoDe(activo) : undefined;
   const faltanRespuestas = pendientes(respuestasConElCv(perfil.respuestas, cv, new Date())).length;
-
-  async function guardar(fn: () => Promise<unknown>, ok: string) {
-    try {
-      await fn();
-      setMsg({ tono: "ok", texto: ok });
-    } catch (e) {
-      setMsg({ tono: "riesgo", texto: e instanceof Error ? e.message : "No se pudo guardar." });
-    }
-  }
 
   return (
     <main className="mx-auto max-w-4xl px-5 py-10">

@@ -132,6 +132,16 @@ interface ContextoCarta {
   palabras: Set<string>;
 }
 
+/** Los dos logros del CV más relevantes para la oferta; ninguno si el CV está en otro idioma que el documento. */
+function logrosRelevantes(p: PerfilJson, c: ContextoCarta): { h: string; donde?: string }[] {
+  if (!c.cvMismoIdioma) return [];
+  return p.work
+    .flatMap((w) => w.highlights.map((h) => ({ h, donde: w.name, r: relevancia(h, c.pesos, c.palabras) })))
+    .filter((x) => x.r > 0.3 && !enOtroIdioma(x.h, c.idioma))
+    .sort((a, b) => b.r - a.r)
+    .slice(0, 2);
+}
+
 function carta(p: PerfilJson, o: OfertaParaDocs, c: ContextoCarta): string {
   const b = p.basics;
   const es = c.idioma === "es";
@@ -144,16 +154,9 @@ function carta(p: PerfilJson, o: OfertaParaDocs, c: ContextoCarta): string {
   else if (top.length) intro += es ? ` Tengo experiencia directa con ${lista(top, c.idioma)}.` : ` I have hands-on experience with ${lista(top, c.idioma)}.`;
   partes.push(intro);
 
-  // Evidencia: los dos logros más relevantes, solo si el CV está escrito en el idioma de la carta.
-  if (c.cvMismoIdioma) {
-    const logros = p.work
-      .flatMap((w) => w.highlights.map((h) => ({ h, donde: w.name, r: relevancia(h, c.pesos, c.palabras) })))
-      .filter((x) => x.r > 0.3 && !enOtroIdioma(x.h, c.idioma))
-      .sort((a, b) => b.r - a.r)
-      .slice(0, 2);
-    if (logros.length) {
-      partes.push(logros.map((l) => (l.donde ? (es ? `En ${l.donde}, ${frase(l.h)}.` : `At ${l.donde}: ${frase(l.h)}.`) : `${l.h.replace(/[.;]+$/, "")}.`)).join(" "));
-    }
+  const logros = logrosRelevantes(p, c);
+  if (logros.length) {
+    partes.push(logros.map((l) => (l.donde ? (es ? `En ${l.donde}, ${frase(l.h)}.` : `At ${l.donde}: ${frase(l.h)}.`) : `${l.h.replace(/[.;]+$/, "")}.`)).join(" "));
   }
 
   if (c.transferibles.length) {
@@ -207,20 +210,13 @@ function propuesta(p: PerfilJson, o: OfertaParaDocs, c: ContextoCarta): string {
     prescindible: 0,
   });
 
-  // Evidencia real: logros del CV (solo si están en el idioma de la propuesta) y un proyecto propio con enlace.
-  if (c.cvMismoIdioma) {
-    const logros = p.work
-      .flatMap((w) => w.highlights.map((h) => ({ h, donde: w.name, r: relevancia(h, c.pesos, c.palabras) })))
-      .filter((x) => x.r > 0.3 && !enOtroIdioma(x.h, c.idioma))
-      .sort((a, b) => b.r - a.r)
-      .slice(0, 2);
-    logros.forEach((l, i) =>
-      partes.push({
-        texto: l.donde ? (es ? `${i ? "También" : "Por ejemplo"}, en ${l.donde} ${frase(l.h)}.` : `${i ? "Also" : "For example"}, at ${l.donde} I ${frase(l.h).replace(/^i /, "")}.`) : `${l.h.replace(/[.;]+$/, "")}.`,
-        prescindible: i ? 4 : 1,
-      }),
-    );
-  }
+  // Evidencia real: logros del CV y un proyecto propio con enlace.
+  logrosRelevantes(p, c).forEach((l, i) =>
+    partes.push({
+      texto: l.donde ? (es ? `${i ? "También" : "Por ejemplo"}, en ${l.donde} ${frase(l.h)}.` : `${i ? "Also" : "For example"}, at ${l.donde} I ${frase(l.h).replace(/^i /, "")}.`) : `${l.h.replace(/[.;]+$/, "")}.`,
+      prescindible: i ? 4 : 1,
+    }),
+  );
   const pr = proyectoRelevante(p, c.pesos, c.palabras);
   if (pr) {
     const detalle = c.cvMismoIdioma && pr.description && !enOtroIdioma(pr.description, c.idioma) ? `: ${frase(pr.description)}` : "";

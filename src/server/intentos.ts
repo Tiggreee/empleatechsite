@@ -1,3 +1,4 @@
+import { ErrorHttp } from "./api";
 import { getPool, withTransaction } from "./db";
 
 /**
@@ -10,6 +11,15 @@ import { getPool, withTransaction } from "./db";
 
 export const MAX_FALLOS = 5;
 const BLOQUEO_MS = 15 * 60_000;
+
+/** Los códigos de la app se cuentan por cuenta (no por IP): para llegar ahí ya hizo falta tu contraseña. */
+export const CLAVE_CODIGOS = "cuenta:2fa";
+
+/** Aparta un intento; si esa clave está bloqueada, corta con 429 y dice cuánto esperar. */
+export async function apartarOBloquear(clave: string): Promise<void> {
+  const espera = await apartarIntento(clave);
+  if (espera) throw new ErrorHttp(429, `Demasiados intentos. Espera ${espera} min.`);
+}
 const TOPE_MS = 24 * 3600_000;
 /** Un día sin fallos y se olvida el historial (los bloqueos vuelven a empezar en 15 minutos). */
 const OLVIDO_MS = 24 * 3600_000;
