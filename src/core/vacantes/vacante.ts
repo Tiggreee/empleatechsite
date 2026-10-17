@@ -63,13 +63,22 @@ export interface Vacante {
 // ---------------------------------------------------------------------------------------------------------------
 // HTML → texto
 
+/** Quita los bloques de código con su contenido, también hasta que no quede ninguno (ver sinEtiquetas). */
+function sinBloquesDeCodigo(html: string): string {
+  let antes: string;
+  do {
+    antes = html;
+    html = html.replace(/<(script|style|noscript)[\s\S]*?<\/\1>/gi, "");
+  } while (html !== antes);
+  return html;
+}
+
 /** Texto legible de la descripción HTML de una vacante: párrafos en líneas y listas como viñetas. */
 export function htmlATexto(html: string): string {
   // Algunas fuentes (Greenhouse) mandan el HTML escapado: &lt;p&gt;…
   const crudo = !/<[a-z/!]/i.test(html) && /&lt;[a-z/]/i.test(html) ? decodificarEntidades(html) : html;
   const texto = sinEtiquetas(
-    crudo
-      .replace(/<(script|style|noscript)[\s\S]*?<\/\1>/gi, "")
+    sinBloquesDeCodigo(crudo)
       .replace(/<br\s*\/?>/gi, "\n")
       .replace(/<li[^>]*>/gi, "\n- ")
       // </li> no agrega salto: el siguiente <li> ya abre su propia línea.

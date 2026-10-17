@@ -33,6 +33,7 @@ describe("normalización de vacantes", () => {
     expect(htmlATexto("<script>alert(1)</script><p>ok</p>")).toBe("ok");
     // Quitar «<b>» de una sola pasada armaría un «<script>» nuevo; se quitan etiquetas hasta que no quede ninguna.
     expect(htmlATexto("<<b>script>hola<</b>/script>")).toBe("hola");
+    expect(htmlATexto("<scr<script>x</script>ipt>alert(1)</script><p>ok</p>")).toBe("ok");
   });
 
   it("salarios en texto libre", () => {
