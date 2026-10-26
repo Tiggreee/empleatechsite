@@ -53,6 +53,23 @@ export const SKILLS: Skill[] = [
   s("swift", "Swift", "lenguaje", ["swift", "swiftui"]),
   s("kotlin", "Kotlin", "lenguaje", ["kotlin"], { family: "jvm" }),
   s("scala", "Scala", "lenguaje", ["scala"], { family: "jvm" }),
+  // «C» suelta es ambigua («Series C», «C-level», «English C2»): solo cuenta con contexto de lenguaje.
+  s("c", "C", "lenguaje", [], {
+    cs: [
+      "(?<![A-Za-z0-9+#./-])C(?=\\s+(?:language|programming|lenguaje)\\b)",
+      "(?<=\\b(?:[Ll]enguaje|[Ll]anguage|[Ii]n|[Ee]n)\\s)C(?![A-Za-z0-9+#/'’-]|\\.[A-Za-z0-9])",
+      "(?<![A-Za-z0-9+#./-])C(?=\\s*(?:\\/|,|and|or|y|o)\\s*(?:C\\+\\+|C#|Rust|Go|Assembly)(?![A-Za-z]))",
+      "(?<=(?:C\\+\\+|C#)\\s*(?:\\/|,|and|or|y|o)\\s*)C(?![A-Za-z0-9+#/'’-]|\\.[A-Za-z0-9])",
+    ],
+  }),
+  s("haskell", "Haskell", "lenguaje", ["haskell"]),
+  s("elixir", "Elixir", "lenguaje", ["elixir"], { family: "beam" }),
+  s("erlang", "Erlang", "lenguaje", ["erlang"], { family: "beam" }),
+  s("clojure", "Clojure", "lenguaje", ["clojure"]),
+  s("ocaml", "OCaml", "lenguaje", ["ocaml"]),
+  s("fsharp", "F#", "lenguaje", ["f#", "fsharp"]),
+  s("perl", "Perl", "lenguaje", ["perl"]),
+  s("cobol", "COBOL", "lenguaje", ["cobol"]),
   s("sql", "SQL", "datos", ["sql", "t-sql", "pl/sql", "plsql"], { family: "sql" }),
   s("bash", "Bash / Shell", "lenguaje", ["bash", "shell scripting", "shell script", "powershell"]),
   s("html", "HTML", "frontend", ["html", "html5"]),

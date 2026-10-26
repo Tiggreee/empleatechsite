@@ -253,6 +253,17 @@ describe("casos encontrados con datos reales", () => {
     expect(tecnica.prioridad.valor).toBeGreaterThan(55);
   });
 
+  it("si exige lenguajes que no tienes, que coincidan la base de datos o Docker no la sube (Supabase pedía Haskell y C)", () => {
+    const cv = "Java, Spring Boot, Kafka, React, PostgreSQL, Oracle SQL/PL-SQL, Docker y OCI.";
+    const descripcion = "Strong Haskell skills with at least 3 years of experience.\nExperience using the C language.\nSolid knowledge of SQL and plpgsql scripting in PostgreSQL.\nExperience with Docker.";
+    const supabase = puntuar(v({ titulo: "Data API Engineer", descripcion }), cv, RESPUESTAS_VACIAS, AHORA);
+    expect(supabase.prioridad.valor).toBeLessThanOrEqual(40);
+    expect(supabase.prioridad.factores.join(" ")).toMatch(/Pide como requisito .*Haskell.* ninguno de esos lenguajes \(tope 40\)/);
+    // Con uno de los lenguajes que pide (aquí Java) no hay tope: el resto es negociable.
+    const conJava = puntuar(v({ titulo: "Backend Engineer", descripcion: "Java or Go. Kafka and PostgreSQL. Docker." }), cv, RESPUESTAS_VACIAS, AHORA);
+    expect(conJava.prioridad.factores.join(" ")).not.toMatch(/tope 40/);
+  });
+
   it("busca con todas tus herramientas: HTML, CSS y JavaScript también, aunque los menciones menos", () => {
     const cv = "Java, Java, Java. Spring Boot, Spring Boot. Kafka, Kafka. React, React. Kotlin. PostgreSQL. Python. HTML, CSS y JavaScript.";
     expect(terminosDelCv(cv)).toEqual(expect.arrayContaining(["html", "css", "javascript"]));
