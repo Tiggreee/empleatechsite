@@ -40,6 +40,27 @@ describe("agregadores", () => {
     expect(v.descripcion).toBe("Node.js y PostgreSQL\n\n- Diseñar APIs");
   });
 
+  it("Get on Board: «remoto solo local» toma el país de location_tenants cuando countries solo dice «Remote»", () => {
+    const [v] = mapearGetOnBoard({
+      data: [
+        {
+          id: "desarrollador-back-end-agilesoft-spa-remote-b90b",
+          attributes: {
+            title: "Desarrollador Back-end Java / Quarkus / Kafka",
+            description: "<p>Java y Kafka</p>",
+            remote: true,
+            remote_modality: "remote_local",
+            countries: ["Remote"],
+            location_tenants: { data: [{ id: "dominican_republic", type: "country", attributes: { name: "Dominican Republic" } }] },
+            company: { data: { attributes: { name: "Agilesoft SpA" } } },
+          },
+          links: { public_url: "https://www.getonbrd.com/jobs/desarrollador-back-end-agilesoft-spa-remote-b90b" },
+        },
+      ],
+    });
+    expect(v).toMatchObject({ modalidad: "remoto", paises: ["DO"], ubicacion: "Remote, Dominican Republic" });
+  });
+
   it("Remotive: remoto, países del texto libre y salario en texto", () => {
     const [v] = mapearRemotive({
       "0-legal-notice": "…",
