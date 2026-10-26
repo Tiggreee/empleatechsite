@@ -186,6 +186,17 @@ describe("detectarHabilidades", () => {
     expect(detectarHabilidades("Python Python Python Docker")[0].id).toBe("python");
     expect(detectarHabilidades("")).toEqual([]);
   });
+
+  it("«C» solo cuenta como lenguaje cuando el contexto lo dice", () => {
+    const ids = (t: string) => detectarHabilidades(t).map((h) => h.id);
+    expect(ids("Experience using the C language.")).toContain("c");
+    expect(ids("Proficiency in C/C++ and Rust.")).toEqual(expect.arrayContaining(["c", "cpp", "rust"]));
+    expect(ids("Programas en C y Python.")).toContain("c");
+    expect(ids("Strong Haskell skills.")).toContain("haskell");
+    for (const t of ["Series C funding", "C-level stakeholders", "English C2", "C# and .NET", "Senior C++ developer", "Plan C"]) {
+      expect(ids(t)).not.toContain("c");
+    }
+  });
 });
 
 describe("ofertas y CV de México y LatAm", () => {

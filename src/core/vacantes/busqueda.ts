@@ -171,7 +171,7 @@ const NIVEL_ENTRADA = /\b(junior|jr|intern|internship|trainee|practicante|practi
  * FNV-1a de 32 bits: basta para detectar cambios, no es criptográfico.
  */
 /** Súbela cuando cambie cómo se puntúa: las vacantes guardadas se vuelven a puntuar solas. */
-const VERSION_PUNTAJE = 6;
+const VERSION_PUNTAJE = 7;
 
 /** Reglas del radar que no aplican al ordenar vacantes (ver detectarAlertas). */
 const OMITIR_EN_BUSQUEDA = ["sin-rango-salarial"] as const;
@@ -222,6 +222,14 @@ export function puntuar(v: Vacante, cvTexto: string, respuestas: Respuestas, aho
   } else if (herramientas === 1) {
     tope = 55;
     factores.push("Pide una sola herramienta técnica reconocible: revisa a mano si el puesto es para ti (tope 55)");
+  }
+  // Si exige lenguajes y no tienes ninguno (ni uno de su familia), que coincidan la base de datos o la nube no la vuelve
+  // tuya: así salía «Data API Engineer» de Supabase con 83 pidiendo Haskell y C.
+  const lenguajes = analisis.hallazgos.filter((h) => h.cat === "lenguaje" && h.nivel === "requerida");
+  if (lenguajes.length && lenguajes.every((h) => h.estado === "faltante")) {
+    tope = Math.min(tope, 40);
+    const nombres = lenguajes.slice(0, 3).map((h) => h.label).join(", ");
+    factores.push(`Pide como requisito ${nombres} y tu CV no tiene ${lenguajes.length === 1 ? "ese lenguaje" : "ninguno de esos lenguajes"} (tope 40)`);
   }
   if (ajuste?.puntos) {
     valor += ajuste.puntos;
