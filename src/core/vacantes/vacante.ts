@@ -1,4 +1,5 @@
-import { prep } from "../analisis/texto";
+import { decodificarEntidades, prep, sinEtiquetas } from "../analisis/texto";
+import { paisesEnClave } from "./paises";
 
 /** Plataformas de donde vienen las vacantes. Cada una tiene su adaptador en src/server/fuentes. */
 export const FUENTES = [
@@ -62,32 +63,28 @@ export interface Vacante {
 // ---------------------------------------------------------------------------------------------------------------
 // HTML → texto
 
-const ENTIDADES: Record<string, string> = {
-  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", ndash: "–", mdash: "—", hellip: "…", rsquo: "’", lsquo: "‘",
-  rdquo: "”", ldquo: "“", bull: "•", middot: "·", aacute: "á", eacute: "é", iacute: "í", oacute: "ó", uacute: "ú", ntilde: "ñ",
-  Aacute: "Á", Eacute: "É", Iacute: "Í", Oacute: "Ó", Uacute: "Ú", Ntilde: "Ñ", uuml: "ü", euro: "€", copy: "©", reg: "®",
-};
-
-export function decodificarEntidades(s: string): string {
-  return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) => {
-    if (e[0] !== "#") return ENTIDADES[e] ?? ENTIDADES[e.toLowerCase()] ?? m;
-    const cp = e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
-    return Number.isFinite(cp) && cp > 0 && cp <= 0x10ffff ? String.fromCodePoint(cp) : "";
-  });
+/** Quita los bloques de código con su contenido, también hasta que no quede ninguno (ver sinEtiquetas). */
+function sinBloquesDeCodigo(html: string): string {
+  let antes: string;
+  do {
+    antes = html;
+    html = html.replace(/<(script|style|noscript)[\s\S]*?<\/\1>/gi, "");
+  } while (html !== antes);
+  return html;
 }
 
 /** Texto legible de la descripción HTML de una vacante: párrafos en líneas y listas como viñetas. */
 export function htmlATexto(html: string): string {
   // Algunas fuentes (Greenhouse) mandan el HTML escapado: &lt;p&gt;…
   const crudo = !/<[a-z/!]/i.test(html) && /&lt;[a-z/]/i.test(html) ? decodificarEntidades(html) : html;
-  const texto = crudo
-    .replace(/<(script|style|noscript)[\s\S]*?<\/\1>/gi, "")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<li[^>]*>/gi, "\n- ")
-    // </li> no agrega salto: el siguiente <li> ya abre su propia línea.
-    .replace(/<\/(p|div|ul|ol|h[1-6]|tr|section|article|blockquote)>/gi, "\n")
-    .replace(/<(p|div|h[1-6]|tr|section|article|blockquote)(\s[^>]*)?>/gi, "\n")
-    .replace(/<[^>]+>/g, "");
+  const texto = sinEtiquetas(
+    sinBloquesDeCodigo(crudo)
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<li[^>]*>/gi, "\n- ")
+      // </li> no agrega salto: el siguiente <li> ya abre su propia línea.
+      .replace(/<\/(p|div|ul|ol|h[1-6]|tr|section|article|blockquote)>/gi, "\n")
+      .replace(/<(p|div|h[1-6]|tr|section|article|blockquote)(\s[^>]*)?>/gi, "\n"),
+  );
   return decodificarEntidades(texto)
     .replace(/\r\n?/g, "\n")
     .split("\n")
@@ -141,8 +138,19 @@ export function modalidadDeTexto(texto: string | undefined | null): Modalidad | 
   const f = prep(texto).folded;
   if (/\b(hibrid[oa]|hybrid)\b/.test(f)) return "hibrido";
   if (/\b(remot[oa]|remote|anywhere|work from home|teletrabajo|home office)\b/.test(f)) return "remoto";
-  if (/\b(presencial|on-?site|in-?office|in office)\b/.test(f)) return "presencial";
+  if (/\b(presencial|on-?site|in-?office|in office|in-?person|in person)\b/.test(f)) return "presencial";
   return undefined;
+}
+
+/**
+ * Lo que se deduce aunque la plataforma no lo diga (o lo diga mal): si el título dice «In-person» o «Remote», manda
+ * sobre el dato de la plataforma; y «US-REMOTE; CA-TOR» en la ubicación dice en qué países hay que vivir. Se aplica al
+ * crear la vacante y al volver a puntuar las que ya estaban guardadas.
+ */
+export function completarVacante(v: Vacante): Vacante {
+  const modalidad = modalidadDeTexto(v.titulo) ?? v.modalidad;
+  const paises = v.paises.length ? v.paises : paisesEnClave(v.ubicacion);
+  return modalidad === v.modalidad && paises.length === v.paises.length ? v : { ...v, modalidad, paises };
 }
 
 const ATS_POR_DOMINIO: [RegExp, Ats][] = [
@@ -225,5 +233,5 @@ export function crearVacante(fuente: FuenteId, datos: Omit<Vacante, "id" | "fuen
     tipo: datos.tipo === "proyecto" ? "proyecto" : undefined,
     propuestas: typeof datos.propuestas === "number" && Number.isInteger(datos.propuestas) && datos.propuestas >= 0 ? datos.propuestas : undefined,
   };
-  return Object.fromEntries(Object.entries(vacante).filter(([, v]) => v !== undefined)) as unknown as Vacante;
+  return completarVacante(Object.fromEntries(Object.entries(vacante).filter(([, v]) => v !== undefined)) as unknown as Vacante);
 }

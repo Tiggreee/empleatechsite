@@ -18,7 +18,7 @@ async function prepararDesdeVacantes(page: Page) {
   await page.getByRole("button", { name: /Subir mi CV|Agregar CV/ }).first().click();
   await page.getByLabel(/Texto del CV/).fill(CV);
   await page.getByRole("button", { name: "Guardar CV" }).click();
-  await expect(page.getByText("CV guardado en tu base local.")).toBeVisible();
+  await expect(page.getByText("CV guardado.")).toBeVisible();
 
   await page.goto("/vacantes");
   await page.getByLabel("Puestos o palabras clave").fill("Backend Developer");

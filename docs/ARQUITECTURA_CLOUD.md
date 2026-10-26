@@ -1,46 +1,28 @@
-﻿# Arquitectura cloud (futuro)
+﻿# Arquitectura cloud
 
-> Este documento describe una dirección posible. No implica que ya exista infraestructura en nube ni que este repo la configure hoy.
+## Hoy
 
-## Desarrollo local actual
+- **App:** Vercel (Next.js 16), dominio https://empleatech.site.
+- **Base:** Postgres administrado en Neon; las migraciones corren en cada build (`vercel-build`).
+- **Tareas programadas:** Vercel Cron llama `/api/cron/buscar` una vez al día con `CRON_SECRET`.
+- **Secretos:** variables de entorno de Vercel (`DATABASE_URL`, `EMPLEATECH_SECRETO`, `CRON_SECRET`, …); nunca en
+  el repositorio.
+- **CI/CD:** GitHub Actions corre lint, tipos, pruebas unitarias y e2e en cada cambio; Vercel despliega `main`.
 
-El MVP se ejecuta completo en una sola máquina:
+En local todo corre igual con Docker (ver `docs/DEPLOY.md`).
 
-```bash
-npm install
-docker-compose up -d
-npm run migrate
-npm run dev
-```
+## Camino posible hacia OCI
 
-- Next.js sirve la UI y los endpoints `/api/*`.
-- Postgres corre en Docker Compose.
-- Toda la información del usuario queda en esa base local.
+Si un día conviene moverla (costo, control o para practicar OCI):
 
-## Camino razonable hacia OCI
+1. **Aplicación:** imagen de contenedor de Next.js en OCI Container Instances o en una VM; los Route Handlers siguen
+   siendo la API del mismo servicio.
+2. **Base de datos:** OCI Database with PostgreSQL o Postgres en una VM; solo cambia `DATABASE_URL`.
+3. **Migraciones:** `npm run migrate` en el pipeline antes de arrancar.
+4. **Búsqueda diaria:** un job programado (OCI Functions o cron en la VM) que llame `/api/cron/buscar` con su clave.
+5. **Operación:** respaldos automáticos de la base, monitoreo de la app y alertas.
 
-1. **Aplicación**
-   - Empaquetar Next.js en una imagen o desplegarlo en una instancia de cómputo.
-   - Mantener los Route Handlers como API interna del mismo servicio.
+## Lo que falta para más de un usuario
 
-2. **Base de datos**
-   - Mover `DATABASE_URL` a un servicio administrado compatible con Postgres o a una base operada en una VM.
-   - Como alternativa futura, evaluar una base administrada dentro del ecosistema OCI si ofrece el nivel de compatibilidad y costo deseado.
-
-3. **Migraciones**
-   - Ejecutar `npm run migrate` en el pipeline o en el primer arranque del servicio.
-
-4. **Secretos y configuración**
-   - Guardar `DATABASE_URL` y `NEXT_PUBLIC_SITE_URL` como secretos/configuración del entorno.
-
-5. **Operación**
-   - Añadir backups de base de datos.
-   - Definir monitoreo básico de app y DB.
-   - Más adelante, si el proyecto crece, separar perfiles/usuarios reales y autenticación.
-
-## Qué no se hizo todavía
-
-- Provisionar recursos OCI.
-- Configurar CI/CD para despliegue.
-- Diseñar autenticación multiusuario.
-
+Hoy hay una sola cuenta. Para abrirla a otras personas: tablas con `user_id` en cada renglón, registro de cuentas,
+aviso de privacidad y derechos ARCO (LFPDPPP), y límites de uso por cuenta.

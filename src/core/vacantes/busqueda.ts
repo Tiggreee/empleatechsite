@@ -26,9 +26,9 @@ export interface VacantePuntuada {
 // ---------------------------------------------------------------------------------------------------------------
 // Filtros
 
-/** Palabras en minúsculas y sin acentos, sin repetir. */
+/** Palabras en minúsculas y sin acentos, sin repetir. Caben todas tus herramientas: la rotación las recorre por tandas. */
 export function normalizarPalabras(palabras: string[]): string[] {
-  return [...new Set(palabras.map((p) => prep(p).folded.trim().replace(/\s+/g, " ")).filter((p) => p.length >= 2))].slice(0, 12);
+  return [...new Set(palabras.map((p) => prep(p).folded.trim().replace(/\s+/g, " ")).filter((p) => p.length >= 2))].slice(0, 40);
 }
 
 /** Equivalencias español → inglés a nivel de palabra, para que «Desarrolladora Backend» encuentre «Backend Developer». */
@@ -63,15 +63,18 @@ const NIVELES = new Set(["senior", "sr", "semi", "ssr", "junior", "jr", "mid", "
 
 /** Categorías del catálogo que son herramientas de trabajo (no prácticas, idiomas ni habilidades blandas). */
 const CATEGORIAS_HERRAMIENTA = new Set<Categoria>(["lenguaje", "backend", "frontend", "datos", "ia"]);
+/** Lo técnico que puede pedir una vacante: las herramientas más nube y DevOps. */
+const CATEGORIAS_TECNICAS = new Set<Categoria>([...CATEGORIAS_HERRAMIENTA, "cloud", "devops"]);
 
 /** En qué se enfoca una herramienta: Spring Boot → backend. Los lenguajes no dicen enfoque por sí solos. */
 const ENFOQUE: Partial<Record<Categoria, string>> = { backend: "backend", frontend: "frontend", datos: "data", ia: "machine learning" };
 
 /**
- * Desde qué se busca, según tu CV: tus herramientas (las más mencionadas primero; los equivalentes solo si también
- * los tienes, como Kotlin junto a Java) y su enfoque (backend, frontend, fullstack si haces ambos, data…).
+ * Desde qué se busca, según tu CV: todas tus herramientas (las más mencionadas primero; los equivalentes solo si
+ * también los tienes, como Kotlin junto a Java) y su enfoque (backend, frontend, fullstack si haces ambos, data…).
+ * Todas, no las primeras seis: HTML, CSS o JavaScript se mencionan menos que Java o Spring y nunca les tocaba turno.
  */
-export function terminosDelCv(cvTexto: string, max = 6): string[] {
+export function terminosDelCv(cvTexto: string, max = Infinity): string[] {
   const { folded } = prep(cvTexto);
   const tuyas = SKILLS.filter((sk) => CATEGORIAS_HERRAMIENTA.has(sk.cat))
     .map((sk) => ({ sk, n: findMentions(folded, cvTexto, sk).length }))
@@ -168,7 +171,7 @@ const NIVEL_ENTRADA = /\b(junior|jr|intern|internship|trainee|practicante|practi
  * FNV-1a de 32 bits: basta para detectar cambios, no es criptográfico.
  */
 /** Súbela cuando cambie cómo se puntúa: las vacantes guardadas se vuelven a puntuar solas. */
-const VERSION_PUNTAJE = 5;
+const VERSION_PUNTAJE = 7;
 
 /** Reglas del radar que no aplican al ordenar vacantes (ver detectarAlertas). */
 const OMITIR_EN_BUSQUEDA = ["sin-rango-salarial"] as const;
@@ -202,12 +205,32 @@ function textoParaAnalizar(v: Vacante): string {
  */
 export function puntuar(v: Vacante, cvTexto: string, respuestas: Respuestas, ahora: Date, ajuste?: { puntos: number; motivo: string } | null): VacantePuntuada {
   const texto = textoParaAnalizar(v);
-  const resumen = resumir(analizar(cvTexto, texto, { ahora }), detectarAlertas(texto, ahora, { omitir: OMITIR_EN_BUSQUEDA }), ahora);
+  const analisis = analizar(cvTexto, texto, { ahora });
+  const resumen = resumir(analisis, detectarAlertas(texto, ahora, { omitir: OMITIR_EN_BUSQUEDA }), ahora);
   const base = prioridadDeResumen(resumen);
   if (base.valor === null) return { vacante: v, resumen, prioridad: base };
 
   let valor = base.valor;
   const factores = [...base.factores];
+  // La afinidad se mide sobre lo que pide la vacante. Si no pide herramientas técnicas (solo inglés, liderazgo,
+  // negociación…), un 100 no dice que el puesto sea para ti: así salía «Partner Development Manager» primero.
+  const herramientas = new Set(analisis.hallazgos.filter((h) => CATEGORIAS_TECNICAS.has(h.cat)).map((h) => h.id)).size;
+  let tope = 100;
+  if (herramientas === 0) {
+    tope = 15;
+    factores.push("No pide ninguna herramienta técnica: la afinidad sale de idiomas o habilidades generales (tope 15)");
+  } else if (herramientas === 1) {
+    tope = 55;
+    factores.push("Pide una sola herramienta técnica reconocible: revisa a mano si el puesto es para ti (tope 55)");
+  }
+  // Si exige lenguajes y no tienes ninguno (ni uno de su familia), que coincidan la base de datos o la nube no la vuelve
+  // tuya: así salía «Data API Engineer» de Supabase con 83 pidiendo Haskell y C.
+  const lenguajes = analisis.hallazgos.filter((h) => h.cat === "lenguaje" && h.nivel === "requerida");
+  if (lenguajes.length && lenguajes.every((h) => h.estado === "faltante")) {
+    tope = Math.min(tope, 40);
+    const nombres = lenguajes.slice(0, 3).map((h) => h.label).join(", ");
+    factores.push(`Pide como requisito ${nombres} y tu CV no tiene ${lenguajes.length === 1 ? "ese lenguaje" : "ninguno de esos lenguajes"} (tope 40)`);
+  }
   if (ajuste?.puntos) {
     valor += ajuste.puntos;
     factores.push(ajuste.motivo);
@@ -284,7 +307,7 @@ export function puntuar(v: Vacante, cvTexto: string, respuestas: Respuestas, aho
     }
   }
 
-  valor = Math.max(0, Math.min(100, Math.round(valor)));
+  valor = Math.max(0, Math.min(tope, Math.round(valor)));
   let recomendacion = base.recomendacion;
   if (recomendacion === "postular" && valor < 70) recomendacion = "revisar";
   if (recomendacion !== "descartar" && valor < 25) recomendacion = "descartar";

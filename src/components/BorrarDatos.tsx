@@ -13,13 +13,13 @@ export default function BorrarDatos() {
   return (
     <div className="vidrio p-5">
       <p className="text-sm">
-        Ahora mismo guardas <strong>{cantidad}</strong> postulación{cantidad === 1 ? "" : "es"} y <strong>{cvs}</strong> CV{cvs === 1 ? "" : "s"} en tu base local.
+        Ahora mismo guardas <strong>{cantidad}</strong> postulación{cantidad === 1 ? "" : "es"} y <strong>{cvs}</strong> CV{cvs === 1 ? "" : "s"} guardados.
       </p>
       <button
         className="boton boton-sec mt-3"
         disabled={borrando || (cantidad === 0 && cvs === 0)}
         onClick={async () => {
-          if (!window.confirm("Se borrarán tus CVs, ofertas guardadas y postulaciones de la base local. ¿Continuar?")) return;
+          if (!window.confirm("Se borrarán tus CVs, ofertas guardadas y postulaciones. ¿Continuar?")) return;
           setBorrando(true);
           try {
             await borrarDatos();

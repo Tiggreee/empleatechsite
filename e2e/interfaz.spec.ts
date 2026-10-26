@@ -93,7 +93,7 @@ test.describe("Panel: qué te subiría el puntaje", () => {
       .getByLabel(/Texto del CV/)
       .fill("Ana Torres\nDesarrolladora Backend\n\nExperiencia\nDesarrolladora Backend — Acme Pagos\nEne 2021 – Presente\n- APIs REST en Node.js con PostgreSQL y Docker.\n\nHabilidades\nNode.js, TypeScript, PostgreSQL, Docker");
     await page.getByRole("button", { name: "Guardar CV" }).click();
-    await expect(page.getByText("CV guardado en tu base local.")).toBeVisible();
+    await expect(page.getByText("CV guardado.")).toBeVisible();
     await page.goto("/hoy");
     await page.getByRole("button", { name: "Buscar vacantes" }).click();
     await expect(page.getByText(/Encontramos \d+ vacantes? nuevas?/)).toBeVisible();

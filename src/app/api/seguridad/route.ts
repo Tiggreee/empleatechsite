@@ -13,14 +13,12 @@ import {
   type Cuenta,
 } from "@/server/cuenta";
 import { comprobarSegundoFactor, conSesion, palabrasDelSitio, sesionVigente, sinCache } from "@/server/dosPasos";
-import { apartarIntento, ipDeCliente, limpiarIntentos } from "@/server/intentos";
+import { CLAVE_CODIGOS, apartarOBloquear as apartar, ipDeCliente, limpiarIntentos } from "@/server/intentos";
 import { accesoConContrasena, secretoDeSesion } from "@/server/sesion";
 import { cifrar, descifrar, huellaRespaldo, nuevoSecretoTotp, nuevosCodigosRespaldo, secretoLegible, uriTotp, verificarTotp } from "@/server/totp";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const CLAVE_CODIGOS = "cuenta:2fa";
 
 /** Tu sesión y tu cuenta, o error. El proxy ya filtró, pero aquí se vuelve a revisar: es la puerta de lo delicado. */
 async function cuentaConSesion(request: Request): Promise<Cuenta> {
@@ -29,11 +27,6 @@ async function cuentaConSesion(request: Request): Promise<Cuenta> {
   const cuenta = await leerCuenta();
   if (!cuenta) throw new ErrorHttp(409, "Primero crea tu contraseña.");
   return cuenta;
-}
-
-async function apartar(clave: string) {
-  const espera = await apartarIntento(clave);
-  if (espera) throw new ErrorHttp(429, `Demasiados intentos. Espera ${espera} min.`);
 }
 
 export async function GET(request: Request) {

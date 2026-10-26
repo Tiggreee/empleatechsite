@@ -16,7 +16,7 @@ async function guardarCv(page: Page) {
   await page.getByRole("button", { name: /Subir mi CV|Agregar CV/ }).first().click();
   await page.getByLabel(/Texto del CV/).fill(CV);
   await page.getByRole("button", { name: "Guardar CV" }).click();
-  await expect(page.getByText("CV guardado en tu base local.")).toBeVisible();
+  await expect(page.getByText("CV guardado.")).toBeVisible();
 }
 
 test.describe("Proyectos freelance", () => {

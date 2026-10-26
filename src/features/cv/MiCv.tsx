@@ -14,6 +14,7 @@ import {
 } from "@/core/perfil/perfil";
 import { reanalizarTodas } from "@/core/seguimiento/seguimiento";
 import { useDatosApp } from "@/storage/hooks";
+import { useGuardarConAviso } from "@/ui/guardar";
 import { Aviso, Boton, Encabezado, Insignia, Tarjeta, Vacio } from "@/ui/ui";
 import SubirCv from "./SubirCv";
 
@@ -63,18 +64,9 @@ function Entendido({ texto }: { texto: string }) {
 export default function MiCv() {
   const { perfil, postulaciones, guardarEstado } = useDatosApp();
   const [borrador, setBorrador] = useState<Borrador | null>(null);
-  const [msg, setMsg] = useState<{ tono: "ok" | "riesgo"; texto: string } | null>(null);
+  const { msg, guardar: guardarCambios } = useGuardarConAviso();
   const activo = cvActivo(perfil);
   const conOferta = postulaciones.filter((p) => p.oferta).length;
-
-  async function guardarCambios(fn: () => Promise<void>, ok: string) {
-    try {
-      await fn();
-      setMsg({ tono: "ok", texto: ok });
-    } catch (e) {
-      setMsg({ tono: "riesgo", texto: e instanceof Error ? e.message : "No se pudo guardar." });
-    }
-  }
 
   async function guardarBorrador() {
     if (!borrador) return;
@@ -85,7 +77,7 @@ export default function MiCv() {
         : agregarCv(perfil, { nombre: borrador.nombre, texto: borrador.texto }, ahora, crypto.randomUUID());
       await guardarEstado({ perfil: nuevo });
       setBorrador(null);
-    }, "CV guardado en tu base local.");
+    }, "CV guardado.");
   }
 
   async function activar(cv: PerfilCv) {
@@ -104,7 +96,7 @@ export default function MiCv() {
     <main className="mx-auto max-w-4xl px-5 py-10">
       <Encabezado
         titulo="Mi CV"
-        descripcion={`Guarda hasta ${MAX_CVS} versiones de tu CV en la base local. Con un CV activo, analizar una oferta toma un paso.`}
+        descripcion={`Guarda hasta ${MAX_CVS} versiones de tu CV. Con un CV activo, analizar una oferta toma un paso.`}
         acciones={!borrador && perfil.cvs.length < MAX_CVS ? <Boton onClick={() => setBorrador({ nombre: "", texto: "" })}>Agregar CV</Boton> : undefined}
       />
 

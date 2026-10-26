@@ -57,7 +57,7 @@ test.describe("Extensión de Chrome", () => {
     await page.getByRole("button", { name: /Subir mi CV|Agregar CV/ }).first().click();
     await page.getByLabel(/Texto del CV/).fill(CV);
     await page.getByRole("button", { name: "Guardar CV" }).click();
-    await expect(page.getByText("CV guardado en tu base local.")).toBeVisible();
+    await expect(page.getByText("CV guardado.")).toBeVisible();
     await page.goto("/perfil");
     await page.getByRole("radiogroup", { name: "Patrocinio de visa" }).getByLabel("Sí").check();
     await page.getByLabel("México").check();
@@ -120,7 +120,7 @@ test.describe("Extensión de Chrome", () => {
     await page.getByRole("button", { name: /Subir mi CV|Agregar CV/ }).first().click();
     await page.getByLabel(/Texto del CV/).fill(CV);
     await page.getByRole("button", { name: "Guardar CV" }).click();
-    await expect(page.getByText("CV guardado en tu base local.")).toBeVisible();
+    await expect(page.getByText("CV guardado.")).toBeVisible();
 
     contexto = await chromium.launchPersistentContext(path.join(os.tmpdir(), `empleatech-ext-${Date.now()}`), {
       channel: "chromium",

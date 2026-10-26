@@ -10,7 +10,7 @@ const manifest = JSON.parse(readFileSync(join(__dirname, "../../../extension/man
   content_scripts: { matches: string[]; js: string[] }[];
 };
 const hostsDe = (script: string) =>
-  manifest.content_scripts.filter((c) => c.js.includes(script)).flatMap((c) => c.matches.map((m) => new URL(m.replace("*", "x")).hostname));
+  manifest.content_scripts.filter((c) => c.js.includes(script)).flatMap((c) => c.matches.map((m) => new URL(m.replaceAll("*", "x")).hostname));
 
 describe("dónde trabaja la extensión", () => {
   it("la app dice lo mismo que el manifest: ningún sitio se queda sin aviso ni con un aviso falso", () => {

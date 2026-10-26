@@ -1,7 +1,8 @@
 ﻿import type { PoolClient } from "pg";
 import { APP_PROFILE_ID, APP_PROFILE_NAME } from "@/config/app";
 import { sanitizarResumen } from "@/core/analisis/resumen";
-import { PERFIL_VACIO, sanitizarPerfil, type EstadoPerfil } from "@/core/perfil/perfil";
+import type { CambiosEstado } from "@/core/estado/cambios";
+import { MAX_CVS, sanitizarPerfil, type EstadoPerfil, type PerfilCv } from "@/core/perfil/perfil";
 import { detectarAlertas } from "@/core/radar/radar";
 import { analizarOferta, sanitizar, type Postulacion } from "@/core/seguimiento/seguimiento";
 import { ErrorHttp } from "./api";
@@ -17,37 +18,47 @@ function isoSeguro(valor: unknown, porDefecto = new Date(0).toISOString()): stri
   return Number.isNaN(fecha.getTime()) ? porDefecto : fecha.toISOString();
 }
 
-function normalizarEntrada(payload: Partial<EstadoPersistido> | null | undefined): EstadoPersistido {
-  return {
-    perfil: sanitizarPerfil(payload?.perfil ?? PERFIL_VACIO),
-    postulaciones: sanitizar(payload?.postulaciones ?? []).items,
-  };
-}
-
 function resumenSeguro(valor: unknown) {
   const resumen = sanitizarResumen(valor);
   if (!resumen) throw new ErrorHttp(400, "Resumen de análisis inválido.");
   return resumen;
 }
 
-async function insertarCv(client: PoolClient, perfil: EstadoPerfil) {
-  for (const cv of perfil.cvs) {
-    await client.query(
-      `
-        insert into cvs (id, profile_id, nombre, texto, actualizado_en, estructurado_json, estructurado_editado, created_at, updated_at)
-        values ($1, $2, $3, $4, $5::timestamptz, $6::jsonb, $7, now(), now())
-      `,
-      [
-        cv.id,
-        APP_PROFILE_ID,
-        cv.nombre,
-        cv.texto,
-        isoSeguro(cv.actualizadoEn),
-        cv.estructurado ? JSON.stringify(cv.estructurado) : null,
-        cv.estructuradoEditado === true,
-      ],
-    );
-  }
+async function guardarCv(client: PoolClient, cv: PerfilCv) {
+  await client.query(
+    `
+      insert into cvs (id, profile_id, nombre, texto, actualizado_en, estructurado_json, estructurado_editado, created_at, updated_at)
+      values ($1, $2, $3, $4, $5::timestamptz, $6::jsonb, $7, now(), now())
+      on conflict (id) do update set
+        nombre = excluded.nombre, texto = excluded.texto, actualizado_en = excluded.actualizado_en,
+        estructurado_json = excluded.estructurado_json, estructurado_editado = excluded.estructurado_editado, updated_at = now()
+      where cvs.profile_id = excluded.profile_id
+    `,
+    [
+      cv.id,
+      APP_PROFILE_ID,
+      cv.nombre,
+      cv.texto,
+      isoSeguro(cv.actualizadoEn),
+      cv.estructurado ? JSON.stringify(cv.estructurado) : null,
+      cv.estructuradoEditado === true,
+    ],
+  );
+}
+
+/** El CV activo que pediste si existe; si no (o si lo borraste), el primero que quede. */
+async function fijarCvActivo(client: PoolClient, cvs: string[], pedido: string | null | undefined) {
+  const { rows } = await client.query<{ active_cv_id: string | null }>(`select active_cv_id from profiles where id = $1`, [APP_PROFILE_ID]);
+  const deseado = pedido !== undefined ? pedido : (rows[0]?.active_cv_id ?? null);
+  const activo = deseado && cvs.includes(deseado) ? deseado : (cvs[0] ?? null);
+  await client.query(`update profiles set active_cv_id = $2, updated_at = now() where id = $1 and active_cv_id is distinct from $2`, [APP_PROFILE_ID, activo]);
+}
+
+/** Quita postulaciones con su oferta y su análisis (las alertas del radar se van en cascada). */
+async function borrarPostulaciones(client: PoolClient, ids: string[]) {
+  if (!ids.length) return;
+  await client.query(`delete from tracker_entries where profile_id = $1 and id = any($2::text[])`, [APP_PROFILE_ID, ids]);
+  await client.query(`delete from job_postings where profile_id = $1 and id = any($2::text[])`, [APP_PROFILE_ID, ids]);
 }
 
 async function insertarPostulacion(client: PoolClient, postulacion: Postulacion, cvMap: Map<string, string>) {
@@ -229,26 +240,35 @@ export async function loadState(): Promise<EstadoPersistido> {
   return { perfil, postulaciones };
 }
 
-export async function saveState(payload: Partial<EstadoPersistido>): Promise<EstadoPersistido> {
-  const estado = normalizarEntrada(payload);
+/**
+ * Escribe solo lo que cambió (ver core/estado/cambios), renglón por renglón: lo que no viene en los cambios queda tal
+ * cual. Así dos escritores (esta pestaña, otra pestaña, la extensión) no se pisan: el último no borra lo del otro.
+ */
+export async function aplicarCambios(cambios: CambiosEstado): Promise<EstadoPersistido> {
   await withTransaction(async (client) => {
-    // El perfil se actualiza en su lugar (no se borra) para no arrastrar en cascada las tablas que no viajan en este
-    // estado, como las vacantes encontradas. Solo se reemplazan los CV y el tracker, que sí vienen completos.
     await client.query(
-      `
-        insert into profiles (id, display_name, active_cv_id, respuestas_json, created_at, updated_at)
-        values ($1, $2, $3, $4::jsonb, now(), now())
-        on conflict (id) do update set active_cv_id = excluded.active_cv_id, respuestas_json = excluded.respuestas_json, updated_at = now()
-      `,
-      [APP_PROFILE_ID, APP_PROFILE_NAME, estado.perfil.activoId, JSON.stringify(estado.perfil.respuestas)],
+      `insert into profiles (id, display_name, respuestas_json, created_at, updated_at) values ($1, $2, '{}'::jsonb, now(), now()) on conflict (id) do nothing`,
+      [APP_PROFILE_ID, APP_PROFILE_NAME],
     );
-    await client.query(`delete from tracker_entries where profile_id = $1`, [APP_PROFILE_ID]);
-    await client.query(`delete from job_postings where profile_id = $1`, [APP_PROFILE_ID]);
-    await client.query(`delete from cvs where profile_id = $1`, [APP_PROFILE_ID]);
-    await insertarCv(client, estado.perfil);
-    const cvMap = new Map(estado.perfil.cvs.map((cv) => [cv.id, cv.texto]));
-    for (const postulacion of estado.postulaciones) {
-      await insertarPostulacion(client, postulacion, cvMap);
+    if (cambios.respuestas) {
+      await client.query(`update profiles set respuestas_json = $2::jsonb, updated_at = now() where id = $1`, [APP_PROFILE_ID, JSON.stringify(cambios.respuestas)]);
+    }
+
+    for (const cv of cambios.cvs?.guardar ?? []) await guardarCv(client, cv);
+    if (cambios.cvs?.borrar.length) await client.query(`delete from cvs where profile_id = $1 and id = any($2::text[])`, [APP_PROFILE_ID, cambios.cvs.borrar]);
+    const { rows: cvs } = await client.query<{ id: string; texto: string }>(
+      `select id, texto from cvs where profile_id = $1 order by created_at asc, nombre asc`,
+      [APP_PROFILE_ID],
+    );
+    if (cvs.length > MAX_CVS) throw new ErrorHttp(400, `Puedes guardar hasta ${MAX_CVS} CVs. Borra uno antes de agregar otro.`);
+    await fijarCvActivo(client, cvs.map((cv) => cv.id), cambios.activoId);
+
+    const postulaciones = cambios.postulaciones;
+    if (postulaciones) {
+      // Modificar = reemplazar ese renglón (con su oferta y su análisis); las demás postulaciones no se tocan.
+      await borrarPostulaciones(client, [...postulaciones.borrar, ...postulaciones.guardar.map((p) => p.id)]);
+      const cvMap = new Map(cvs.map((cv) => [cv.id, cv.texto]));
+      for (const postulacion of postulaciones.guardar) await insertarPostulacion(client, postulacion, cvMap);
     }
   });
   return loadState();

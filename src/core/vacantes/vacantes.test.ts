@@ -3,7 +3,7 @@ import { RESPUESTAS_VACIAS, sanitizarRespuestas } from "../perfil/respuestas";
 import { buscarVacantes, coincidePalabras, deduplicar, huellaPuntaje, ordenar, palabrasDeLaBusqueda, pasaFiltros, puntuar, terminosDelCv } from "./busqueda";
 import { INFO_FUENTES, type Consulta, type ContextoFuente, type FuenteVacantes } from "./fuentes";
 import { paisesDeTexto } from "./paises";
-import { atsDeUrl, claveDuplicado, crearVacante, htmlATexto, modalidadDeTexto, salarioDeTexto, type Vacante } from "./vacante";
+import { atsDeUrl, claveDuplicado, completarVacante, crearVacante, htmlATexto, modalidadDeTexto, salarioDeTexto, type Vacante } from "./vacante";
 
 const AHORA = new Date("2026-09-28T12:00:00Z");
 
@@ -31,6 +31,9 @@ describe("normalización de vacantes", () => {
     expect(htmlATexto("<p>Hola&nbsp;<b>mundo</b></p><ul><li>Node.js</li><li>SQL &amp; Docker</li></ul>")).toBe("Hola mundo\n\n- Node.js\n- SQL & Docker");
     expect(htmlATexto("&lt;p&gt;Escapado &amp;amp; bien&lt;/p&gt;")).toBe("Escapado & bien");
     expect(htmlATexto("<script>alert(1)</script><p>ok</p>")).toBe("ok");
+    // Quitar «<b>» de una sola pasada armaría un «<script>» nuevo; se quitan etiquetas hasta que no quede ninguna.
+    expect(htmlATexto("<<b>script>hola<</b>/script>")).toBe("hola");
+    expect(htmlATexto("<scr<script>x</script>ipt>alert(1)</script><p>ok</p>")).toBe("ok");
   });
 
   it("salarios en texto libre", () => {
@@ -221,6 +224,49 @@ describe("casos encontrados con datos reales", () => {
     expect(coincidePalabras(v({ titulo: "Desarrollador Java Sr" }), ["Java Software Engineer"])).toBe(true);
     expect(coincidePalabras(v({ titulo: "Java Developer (Spring)" }), ["Java Software Engineer"])).toBe(true);
     expect(coincidePalabras(v({ titulo: "Software Engineer, Payments" }), ["Java Software Engineer"])).toBe(false);
+  });
+
+  it("ubicaciones en clave de país: «US-REMOTE; US-CHICAGO; CA-TOR» pide vivir en EE. UU. o Canadá", () => {
+    expect(paisesDeTexto("US-REMOTE; US-CHICAGO; US-ATLANTA; CA-TOR").paises).toEqual(["CA", "US"]);
+    expect(paisesDeTexto("US").paises).toEqual(["US"]);
+    expect(paisesDeTexto("San Jose, CA").paises).toEqual(["US"]);
+    expect(paisesDeTexto("Join us remotely").paises).toEqual([]);
+    // Las que ya estaban guardadas se corrigen al volver a puntuar.
+    const stripe = { ...v({ fuente: "greenhouse", titulo: "Partner Development Manager" }), ubicacion: "US-REMOTE; US-CHICAGO; CA-TOR", paises: [] };
+    expect(completarVacante(stripe).paises).toEqual(["CA", "US"]);
+  });
+
+  it("«In-person» en el título es presencial aunque la plataforma diga remoto", () => {
+    expect(modalidadDeTexto("In-person Java Trainer for IT Graduates")).toBe("presencial");
+    expect(v({ titulo: "In-person Java Trainer for IT Graduates", modalidad: "remoto" }).modalidad).toBe("presencial");
+    expect(v({ titulo: "Java Developer", modalidad: "remoto" }).modalidad).toBe("remoto");
+  });
+
+  it("un puesto que no pide herramientas técnicas no sale arriba por inglés y liderazgo", () => {
+    const cv = "Líder técnico bilingüe. Inglés C2. Liderazgo de equipos. Java, Spring Boot, Kafka, React y OCI.";
+    const negocio = puntuar(v({ titulo: "Partner Development Manager", descripcion: "Fluent English required. Leadership and negotiation skills. Stakeholder management." }), cv, RESPUESTAS_VACIAS, AHORA);
+    expect(negocio.prioridad.valor).toBeLessThanOrEqual(15);
+    expect(negocio.prioridad.factores.join(" ")).toMatch(/ninguna herramienta técnica/);
+    const una = puntuar(v({ titulo: "Java Trainer", descripcion: "Teach Java to graduates. Fluent English and leadership." }), cv, RESPUESTAS_VACIAS, AHORA);
+    expect(una.prioridad.valor).toBeLessThanOrEqual(55);
+    const tecnica = puntuar(v({ titulo: "Backend Engineer", descripcion: "Java, Spring Boot and Kafka. Fluent English." }), cv, RESPUESTAS_VACIAS, AHORA);
+    expect(tecnica.prioridad.valor).toBeGreaterThan(55);
+  });
+
+  it("si exige lenguajes que no tienes, que coincidan la base de datos o Docker no la sube (Supabase pedía Haskell y C)", () => {
+    const cv = "Java, Spring Boot, Kafka, React, PostgreSQL, Oracle SQL/PL-SQL, Docker y OCI.";
+    const descripcion = "Strong Haskell skills with at least 3 years of experience.\nExperience using the C language.\nSolid knowledge of SQL and plpgsql scripting in PostgreSQL.\nExperience with Docker.";
+    const supabase = puntuar(v({ titulo: "Data API Engineer", descripcion }), cv, RESPUESTAS_VACIAS, AHORA);
+    expect(supabase.prioridad.valor).toBeLessThanOrEqual(40);
+    expect(supabase.prioridad.factores.join(" ")).toMatch(/Pide como requisito .*Haskell.* ninguno de esos lenguajes \(tope 40\)/);
+    // Con uno de los lenguajes que pide (aquí Java) no hay tope: el resto es negociable.
+    const conJava = puntuar(v({ titulo: "Backend Engineer", descripcion: "Java or Go. Kafka and PostgreSQL. Docker." }), cv, RESPUESTAS_VACIAS, AHORA);
+    expect(conJava.prioridad.factores.join(" ")).not.toMatch(/tope 40/);
+  });
+
+  it("busca con todas tus herramientas: HTML, CSS y JavaScript también, aunque los menciones menos", () => {
+    const cv = "Java, Java, Java. Spring Boot, Spring Boot. Kafka, Kafka. React, React. Kotlin. PostgreSQL. Python. HTML, CSS y JavaScript.";
+    expect(terminosDelCv(cv)).toEqual(expect.arrayContaining(["html", "css", "javascript"]));
   });
 
   it("en el tablero oficial de la empresa una vacante antigua sigue abierta", () => {

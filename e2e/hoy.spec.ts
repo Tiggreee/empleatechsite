@@ -17,7 +17,7 @@ async function colaConVacantes(page: Page) {
   await page.getByRole("button", { name: /Subir mi CV|Agregar CV/ }).first().click();
   await page.getByLabel(/Texto del CV/).fill(CV);
   await page.getByRole("button", { name: "Guardar CV" }).click();
-  await expect(page.getByText("CV guardado en tu base local.")).toBeVisible();
+  await expect(page.getByText("CV guardado.")).toBeVisible();
   await page.goto("/hoy");
   // Las palabras de búsqueda salen del perfil («Desarrolladora Backend»): no hay que configurar nada.
   await page.getByRole("button", { name: "Buscar vacantes" }).click();
@@ -68,7 +68,8 @@ test.describe("Vacantes de hoy", () => {
     const deslizar = async (dx: number) => {
       await page.mouse.move(caja.x + caja.width / 2, caja.y + 40);
       await page.mouse.down();
-      await page.mouse.move(caja.x + caja.width / 2 + dx, caja.y + 40, { steps: 8 });
+      // Rápido a propósito: el dedo se levanta antes de que React pinte el último movimiento, y aun así cuenta.
+      await page.mouse.move(caja.x + caja.width / 2 + dx, caja.y + 40, { steps: 2 });
       await page.mouse.up();
     };
     page.once("dialog", (d) => void d.dismiss());

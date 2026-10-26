@@ -7,7 +7,7 @@ async function subirCvOdt(page: Page) {
   await page.locator("input[type=file]").setInputFiles({ name: "cv.odt", mimeType: "application/vnd.oasis.opendocument.text", buffer: crearOdt(CV_COMPLETO) });
   await expect(page.getByText(/Leído cv\.odt/)).toBeVisible();
   await page.getByRole("button", { name: "Guardar CV" }).click();
-  await expect(page.getByText("CV guardado en tu base local.")).toBeVisible();
+  await expect(page.getByText("CV guardado.")).toBeVisible();
 }
 
 test.describe("Perfil estructurado", () => {

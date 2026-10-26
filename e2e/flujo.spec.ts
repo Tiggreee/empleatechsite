@@ -10,7 +10,7 @@ async function guardarCv(page: Page, texto = CV_TXT, nombre = "Principal") {
   await page.getByLabel("Nombre de esta versión").fill(nombre);
   await page.getByLabel(/Texto del CV/).fill(texto);
   await page.getByRole("button", { name: "Guardar CV" }).click();
-  await expect(page.getByText("CV guardado en tu base local.")).toBeVisible();
+  await expect(page.getByText("CV guardado.")).toBeVisible();
 }
 
 async function analizarYGuardar(page: Page, oferta: string, empresa: string, puesto: string) {

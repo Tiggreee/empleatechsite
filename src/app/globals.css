@@ -134,6 +134,9 @@
 @media (pointer: coarse) {
   .boton, .campo { min-height: 44px; }
   input[type="checkbox"], input[type="radio"] { width: 1.25rem; height: 1.25rem; }
+  /* En casillas y opciones se toca toda la etiqueta: es ella la que debe medir 44 px. */
+  label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { min-height: 44px; }
+  summary { padding-block: 0.75rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

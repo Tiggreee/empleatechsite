@@ -1,4 +1,5 @@
-﻿import { limpiarTextoCv, lineasDesdeFragmentos, type FragmentoPdf } from "@/core/perfil/limpiar";
+﻿import { decodificarEntidades, sinEtiquetas } from "@/core/analisis/texto";
+import { limpiarTextoCv, lineasDesdeFragmentos, type FragmentoPdf } from "@/core/perfil/limpiar";
 
 export const MAX_BYTES = 5 * 1024 * 1024;
 const MAX_PAGINAS = 15;
@@ -35,23 +36,19 @@ export function detectarFormato(nombre: string, cabecera: Uint8Array): FormatoCv
   throw new ErrorImportacion(`Formato no compatible (.${ext}). Usa PDF, DOCX, ODT, TXT o MD.`);
 }
 
-const ENTIDADES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
-
 /** Texto legible del content.xml de un .odt: un párrafo por línea y las listas como viñetas. */
 export function textoDesdeOdtXml(xml: string): string {
   const cuerpo = /<office:text[\s>][\s\S]*<\/office:text>/.exec(xml)?.[0] ?? xml;
-  return cuerpo
-    .replace(/<text:line-break\s*\/>/g, "\n")
-    .replace(/<text:tab\s*\/>/g, "\t")
-    .replace(/<text:s(?:\s+text:c="(\d+)")?\s*\/>/g, (_, n: string | undefined) => " ".repeat(Math.min(Number(n ?? 1), 20)))
-    .replace(/<text:list-item(?:\s[^>]*)?>/g, "- ")
-    .replace(/<\/text:(?:p|h)>/g, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) => {
-      if (e[0] !== "#") return ENTIDADES[e.toLowerCase()] ?? m;
-      const cp = e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
-      return Number.isFinite(cp) && cp > 0 && cp <= 0x10ffff ? String.fromCodePoint(cp) : "";
-    });
+  return decodificarEntidades(
+    sinEtiquetas(
+      cuerpo
+        .replace(/<text:line-break\s*\/>/g, "\n")
+        .replace(/<text:tab\s*\/>/g, "\t")
+        .replace(/<text:s(?:\s+text:c="(\d+)")?\s*\/>/g, (_, n: string | undefined) => " ".repeat(Math.min(Number(n ?? 1), 20)))
+        .replace(/<text:list-item(?:\s[^>]*)?>/g, "- ")
+        .replace(/<\/text:(?:p|h)>/g, "\n"),
+    ),
+  );
 }
 
 async function extraerOdt(buffer: ArrayBuffer): Promise<string> {
