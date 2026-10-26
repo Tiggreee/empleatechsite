@@ -21,14 +21,17 @@ export function mapearGetOnBoard(json: unknown): Vacante[] {
       const secciones = [a.description, a.functions, a.desirable, a.benefits].map(str).filter(Boolean).join("\n");
       const min = num(a.min_salary);
       const max = num(a.max_salary);
+      // Con «remoto solo local», `countries` dice solo «Remote»: el país de verdad viene en `location_tenants`.
+      const sedes = arr(obj(a.location_tenants).data).map((t) => str(obj(obj(t).attributes).name)).filter((n): n is string => !!n);
+      const lugares = [...new Set([...strs(a.countries), ...sedes])].join(", ");
       return crearVacante("getonboard", {
         idExterno: str(j.id) ?? "",
         titulo: str(a.title) ?? "",
         empresa: empresa ?? "",
-        ubicacion: strs(a.countries).join(", ") || undefined,
+        ubicacion: lugares || undefined,
         modalidad: MODALIDAD_GOB[str(a.remote_modality) ?? ""] ?? (a.remote === true ? "remoto" : undefined),
         // «fully_remote» acepta a cualquiera; el resto pide estar en los países listados.
-        paises: str(a.remote_modality) === "fully_remote" ? [] : paisesDeTexto(strs(a.countries).join(", ")).paises,
+        paises: str(a.remote_modality) === "fully_remote" ? [] : paisesDeTexto(lugares).paises,
         url: str(obj(j.links).public_url) ?? "",
         descripcion: htmlATexto(secciones),
         publicadaEn: fechaIso(num(a.published_at)),
@@ -43,7 +46,7 @@ export function mapearGetOnBoard(json: unknown): Vacante[] {
 export const getOnBoard: FuenteVacantes = {
   info: INFO_FUENTES.getonboard,
   async buscar(c: Consulta, ctx: ContextoFuente) {
-    const expand = encodeURIComponent('["company"]');
+    const expand = encodeURIComponent('["company","location_tenants"]');
     const lotes = await Promise.all(
       primeras(c).map((q) => ctx.http.json(`https://www.getonbrd.com/api/v0/search/jobs?query=${encodeURIComponent(q)}&per_page=50&page=1&expand=${expand}`)),
     );
