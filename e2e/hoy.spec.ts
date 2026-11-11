@@ -63,21 +63,32 @@ test.describe("Vacantes de hoy", () => {
 
     // Deslizar a la derecha pide la misma confirmación que el botón; si la cancelas, la tarjeta vuelve.
     const tarjeta = page.getByRole("article");
-    const caja = await tarjeta.boundingBox();
-    if (!caja) throw new Error("sin tarjeta");
+    const enReposo = await tarjeta.boundingBox();
+    if (!enReposo) throw new Error("sin tarjeta");
     const deslizar = async (dx: number) => {
+      // Al soltarla, la tarjeta tarda 0.2 s en volver a su lugar. Como una persona, el dedo baja cuando ya está quieta:
+      // antes caía fuera de ella (16 ms después del gesto anterior en el CI) y ese deslizamiento no contaba.
+      await expect.poll(async () => Math.round((await tarjeta.boundingBox())?.x ?? -1)).toBe(Math.round(enReposo.x));
+      const caja = await tarjeta.boundingBox();
+      if (!caja) throw new Error("sin tarjeta");
       await page.mouse.move(caja.x + caja.width / 2, caja.y + 40);
       await page.mouse.down();
       // Rápido a propósito: el dedo se levanta antes de que React pinte el último movimiento, y aun así cuenta.
       await page.mouse.move(caja.x + caja.width / 2 + dx, caja.y + 40, { steps: 2 });
       await page.mouse.up();
     };
-    page.once("dialog", (d) => void d.dismiss());
-    await deslizar(180);
+    // Cada deslizamiento a la derecha espera su propia confirmación: si el gesto no la pide, falla aquí y no más adelante.
+    const deslizarYContestar = async (aceptar: boolean) => {
+      const dialogo = page.waitForEvent("dialog");
+      const gesto = deslizar(180);
+      const d = await dialogo;
+      await (aceptar ? d.accept() : d.dismiss());
+      await gesto;
+    };
+    await deslizarYContestar(false);
     await expect(page.getByText("Vacante 1 de 2")).toBeVisible();
 
-    page.once("dialog", (d) => void d.accept());
-    await deslizar(180);
+    await deslizarYContestar(true);
     await expect(page.getByText(/^Enviada: .+\. Quedó en tus postulaciones\.$/)).toBeVisible();
     await expect(page.getByText("1 de 10 empleos")).toBeVisible();
     await expect(page.getByText("Vacante 1 de 1")).toBeVisible();
