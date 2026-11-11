@@ -6,7 +6,7 @@ import BorrarDatos from "@/components/BorrarDatos";
 import { cvActivo } from "@/core/perfil/perfil";
 import { ETIQUETA_RECOMENDACION, ordenarPorPrioridad } from "@/core/seguimiento/prioridad";
 import { accionesDeHoy, brechasFrecuentes, generarInsights } from "@/core/seguimiento/panel";
-import { ESTADOS, ETIQUETA_ESTADO, estadisticas } from "@/core/seguimiento/seguimiento";
+import { estadisticas } from "@/core/seguimiento/seguimiento";
 import { TONO_RECOMENDACION } from "@/features/analizar/ResultadoAnalisis";
 import { useDatosApp } from "@/storage/hooks";
 import { Aviso, Encabezado, EnlaceBoton, Estadistica, Insignia, Tarjeta } from "@/ui/ui";
@@ -46,7 +46,11 @@ export default function Panel() {
   const { stats, hoy, insights, top, brechas } = datos;
   const analizadas = lista.filter((p) => p.oferta).length;
   const empezando = !cv || lista.length === 0;
-  const maxEmbudo = Math.max(1, ...ESTADOS.map((e) => stats.porEstado[e]));
+  const etapas: { etiqueta: string; n: number; tasa?: number | null }[] = [
+    { etiqueta: "Enviadas", n: stats.postuladas },
+    { etiqueta: "Entrevista", n: stats.entrevistas, tasa: stats.tasaEntrevista },
+    { etiqueta: "Oferta", n: stats.ofertas, tasa: stats.tasaOferta },
+  ];
 
   return (
     <main className="mx-auto max-w-6xl px-5 py-10">
@@ -141,18 +145,31 @@ export default function Panel() {
         </Tarjeta>
       </div>
 
-      <Tarjeta titulo="Embudo" className="mt-6">
-        <ul className="space-y-2" aria-label="Postulaciones por etapa">
-          {ESTADOS.map((e) => (
-            <li key={e} className="flex items-center gap-3 text-sm">
-              <span className="w-24 shrink-0 text-tenue">{ETIQUETA_ESTADO[e]}</span>
-              <span className="h-2 flex-1 overflow-hidden rounded-full bg-superficie">
-                <span className="block h-full rounded-full bg-gradient-to-r from-cian to-violeta" style={{ width: `${(stats.porEstado[e] / maxEmbudo) * 100}%` }} />
-              </span>
-              <span className="w-6 text-right font-medium">{stats.porEstado[e]}</span>
-            </li>
-          ))}
-        </ul>
+      <Tarjeta titulo="Embudo" className="mt-6" acciones={<Link href="/resultados" className="text-xs text-cian underline underline-offset-4">Qué te funciona</Link>}>
+        {stats.postuladas === 0 ? (
+          <p className="text-sm text-tenue">Cuando envíes tu primera postulación, aquí verás cuántas llegan a entrevista y a oferta.</p>
+        ) : (
+          <>
+            <ul className="space-y-2" aria-label="Postulaciones enviadas por etapa alcanzada">
+              {etapas.map((e) => (
+                <li key={e.etiqueta} className="flex items-center gap-3 text-sm">
+                  <span className="w-28 shrink-0 text-tenue">{e.etiqueta}</span>
+                  <span className="h-2 flex-1 overflow-hidden rounded-full bg-superficie">
+                    <span className="block h-full rounded-full bg-gradient-to-r from-cian to-violeta" style={{ width: `${(e.n / stats.postuladas) * 100}%`, minWidth: e.n ? 4 : 0 }} />
+                  </span>
+                  <span className="w-24 whitespace-nowrap text-right tabular-nums">
+                    <span className="font-medium">{e.n}</span>
+                    {e.tasa !== undefined && <span className="text-tenue"> · {pct(e.tasa)}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-xs text-tenue">
+              {stats.enEspera} esperando respuesta · {stats.cerradasSinEntrevista} cerrada{stats.cerradasSinEntrevista === 1 ? "" : "s"} sin entrevista
+              {stats.diasPromedioRespuesta !== null && ` · ${stats.diasPromedioRespuesta} días en promedio a la entrevista`}. Cuenta lo que alcanzó cada postulación, aunque hoy esté cerrada.
+            </p>
+          </>
+        )}
       </Tarjeta>
 
       <div className="mt-6">
