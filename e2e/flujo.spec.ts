@@ -68,6 +68,9 @@ test("flujo completo: guardar, priorizar, sello humano y panel", async ({ page }
   await page.goto("/panel");
   await expect(page.getByRole("heading", { name: "Empieza en tres pasos" })).toHaveCount(0);
   await expect(page.getByText("Ofertas guardadas por prioridad")).toBeVisible();
+  const embudo = page.getByRole("list", { name: "Postulaciones enviadas por etapa alcanzada" });
+  await expect(embudo.getByRole("listitem").first()).toContainText(/Enviadas\s*1/);
+  await expect(page.getByText(/1 esperando respuesta · 0 cerradas sin entrevista/)).toBeVisible();
 });
 
 test("borrar datos funciona desde el panel", async ({ page }) => {

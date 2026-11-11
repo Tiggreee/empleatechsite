@@ -219,8 +219,16 @@ export interface Estadisticas {
   total: number;
   porEstado: Record<EstadoPostulacion, number>;
   postuladas: number;
+  /** Enviadas que llegaron a entrevista alguna vez, aunque después se hayan cerrado (sale del historial, no del estado de hoy). */
+  entrevistas: number;
+  ofertas: number;
+  /** Enviadas que siguen esperando respuesta. */
+  enEspera: number;
+  /** Enviadas cerradas sin llegar a entrevista: rechazo o silencio, la app no puede distinguirlos. */
+  cerradasSinEntrevista: number;
   tasaEntrevista: number | null;
   tasaOferta: number | null;
+  /** Días promedio de enviar a la primera entrevista u oferta. Un cierre no cuenta: puede ser silencio. */
   diasPromedioRespuesta: number | null;
   pendientesSeguimiento: number;
   scorePromedio: number | null;
@@ -231,6 +239,8 @@ export function estadisticas(lista: Postulacion[], ahora: Date): Estadisticas {
   let postuladas = 0;
   let entrevistas = 0;
   let ofertas = 0;
+  let enEspera = 0;
+  let cerradasSinEntrevista = 0;
   const respuestas: number[] = [];
   let pendientes = 0;
   const scores: number[] = [];
@@ -241,9 +251,12 @@ export function estadisticas(lista: Postulacion[], ahora: Date): Estadisticas {
     if (!p.postuladaEn) continue;
     postuladas++;
     const alcanzo = (e: EstadoPostulacion) => p.historial.some((h) => h.estado === e);
-    if (alcanzo("entrevista") || alcanzo("oferta")) entrevistas++;
+    const tuvoEntrevista = alcanzo("entrevista") || alcanzo("oferta");
+    if (tuvoEntrevista) entrevistas++;
     if (alcanzo("oferta")) ofertas++;
-    const primera = p.historial.find((h) => h.estado !== "guardada" && h.estado !== "postulada");
+    if (p.estado === "postulada") enEspera++;
+    if (p.estado === "rechazada" && !tuvoEntrevista) cerradasSinEntrevista++;
+    const primera = p.historial.find((h) => h.estado === "entrevista" || h.estado === "oferta");
     if (primera) respuestas.push(Math.max(0, diasEntre(p.postuladaEn, new Date(primera.en))));
     if (p.estado === "postulada" && siguienteAccion(p, ahora).tono === "urgente") pendientes++;
   }
@@ -255,6 +268,10 @@ export function estadisticas(lista: Postulacion[], ahora: Date): Estadisticas {
     total: lista.length,
     porEstado,
     postuladas,
+    entrevistas,
+    ofertas,
+    enEspera,
+    cerradasSinEntrevista,
     tasaEntrevista: postuladas ? entrevistas / postuladas : null,
     tasaOferta: postuladas ? ofertas / postuladas : null,
     diasPromedioRespuesta: prom === null ? null : Math.round(prom * 10) / 10,

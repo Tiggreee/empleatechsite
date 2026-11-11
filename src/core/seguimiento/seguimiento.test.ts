@@ -102,6 +102,27 @@ describe("estadisticas", () => {
     expect(e).toMatchObject({ total: 3, postuladas: 2, tasaEntrevista: 0.5, tasaOferta: 0.5, diasPromedioRespuesta: 4, pendientesSeguimiento: 1, scorePromedio: 70 });
   });
 
+  it("el embudo sale del historial: una entrevista que luego se cerró sigue contando", () => {
+    let l = crear([], { empresa: "A", puesto: "1" }, T0, "a1");
+    l = crear(l, { empresa: "B", puesto: "2" }, T0, "b2");
+    l = crear(l, { empresa: "C", puesto: "3" }, T0, "c3");
+    l = crear(l, { empresa: "D", puesto: "4" }, T0, "d4");
+    for (const id of ["a1", "b2", "c3"]) l = marcarPostulada(l, id, [...SELLO_ITEMS], T0);
+    l = cambiarEstado(l, "a1", "entrevista", dias(6));
+    l = cambiarEstado(l, "a1", "rechazada", dias(12));
+    l = cambiarEstado(l, "b2", "rechazada", dias(2));
+    const e = estadisticas(l, dias(13));
+    expect(e).toMatchObject({ postuladas: 3, entrevistas: 1, ofertas: 0, enEspera: 1, cerradasSinEntrevista: 1 });
+    expect(e.porEstado.rechazada).toBe(2);
+  });
+
+  it("un cierre no cuenta como respuesta: puede ser silencio", () => {
+    let l = crear([], { empresa: "A", puesto: "1" }, T0, "a1");
+    l = marcarPostulada(l, "a1", [...SELLO_ITEMS], T0);
+    l = cambiarEstado(l, "a1", "rechazada", dias(21));
+    expect(estadisticas(l, dias(22)).diasPromedioRespuesta).toBeNull();
+  });
+
   it("lista vacía no divide entre cero", () => {
     expect(estadisticas([], T0)).toMatchObject({ total: 0, tasaEntrevista: null, diasPromedioRespuesta: null, scorePromedio: null });
   });
