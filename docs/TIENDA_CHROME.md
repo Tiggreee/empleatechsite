@@ -49,7 +49,7 @@ listo para copiar. Cuenta: de **no comerciante** (la extensión es gratis, sin a
   - Permiso de host `https://empleatech.site/*`: la extensión pide a la cuenta del usuario su perfil, su CV y su carta para la vacante abierta, y registra la postulación cuando el usuario la envía.
   - Permisos de host `http://localhost/*` y `http://127.0.0.1/*`: para quien usa EmpleaTech instalado en su propia computadora.
   - Permiso opcional `https://*/*`: solo se pide (con aviso de Chrome) si el usuario aloja su EmpleaTech en otra dirección y la escribe en las opciones.
-  - Scripts de contenido en Greenhouse, Lever y Ashby (formularios de postulación) y en Workana, Upwork y Freelancer.com (propuestas): leen las preguntas del formulario o el texto del proyecto y escriben las respuestas cuando el usuario pulsa el botón de la extensión. En empleatech.site y localhost: solo avisan que la extensión está instalada y reciben la conexión de un clic.
+  - Scripts de contenido en Greenhouse, Lever, Ashby y Braintrust (formularios de postulación) y en Workana, Upwork y Freelancer.com (propuestas): leen las preguntas del formulario o el texto del proyecto y escriben las respuestas cuando el usuario pulsa el botón de la extensión. En empleatech.site y localhost: solo avisan que la extensión está instalada y reciben la conexión de un clic.
 - **¿Usa código remoto?** No. Todo el código va en el paquete.
 - **Datos que maneja** (marcar; declarar de más no se penaliza, declarar de menos sí):
   - Información de identificación personal (nombre, correo, teléfono, ciudad y LinkedIn del perfil, para llenar formularios).
@@ -70,5 +70,5 @@ listo para copiar. Cuenta: de **no comerciante** (la extensión es gratis, sin a
 ## Notas para quien revisa
 
 > La extensión es la compañera de una aplicación web personal (https://empleatech.site) y necesita una cuenta conectada
-> para llenar datos. Sin cuenta, en un formulario de Greenhouse, Lever o Ashby aparece su panel («Llenar con EmpleaTech»)
+> para llenar datos. Sin cuenta, en un formulario de Greenhouse, Lever, Ashby o Braintrust aparece su panel («Llenar con EmpleaTech»)
 > y al pulsarlo explica que falta conectarla. No envía formularios ni recolecta datos fuera de los sitios listados.
