@@ -70,5 +70,5 @@ listo para copiar. Cuenta: de **no comerciante** (la extensión es gratis, sin a
 ## Notas para quien revisa
 
 > La extensión es la compañera de una aplicación web personal (https://empleatech.site) y necesita una cuenta conectada
-> para llenar datos. Sin cuenta, en un formulario de Greenhouse, Lever o Ashby aparece su panel («Llenar con EmpleaTech»)
+> para llenar datos. Sin cuenta, en un formulario de Greenhouse, Lever, Ashby o Braintrust aparece su panel («Llenar con EmpleaTech»)
 > y al pulsarlo explica que falta conectarla. No envía formularios ni recolecta datos fuera de los sitios listados.
