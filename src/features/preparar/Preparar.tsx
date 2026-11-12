@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { MAX_PROPUESTA, prepararDocumentos, type DocumentosAMedida, type IdiomaDoc, type OfertaParaDocs } from "@/core/documentos/aMedida";
+import { cvADocx, nombreCvDocx } from "@/core/documentos/docx";
 import { TITULOS, cvATexto, rangoFechas } from "@/core/documentos/formato";
 import type { PerfilJson } from "@/core/perfil/estructurado";
 import { cvActivo, estructuradoDe } from "@/core/perfil/perfil";
 import { useDatosApp } from "@/storage/hooks";
 import { Aviso, Boton, Encabezado, EnlaceBoton, Insignia, Tarjeta, Vacio, cx } from "@/ui/ui";
+import { guardarCvDocx, type ResultadoGuardado } from "./guardarDocx";
 
 interface Props {
   vacanteId?: string;
@@ -104,6 +106,7 @@ export default function Preparar({ vacanteId, postulacionId }: Props) {
   const [carta, setCarta] = useState<string | null>(null);
   const [propuesta, setPropuesta] = useState<string | null>(null);
   const [copiado, setCopiado] = useState<string | null>(null);
+  const [docx, setDocx] = useState<{ estado: "guardando" } | { estado: "listo"; r: ResultadoGuardado } | { estado: "error"; error: string } | null>(null);
   const cv = cvActivo(perfil);
 
   // Oferta desde una vacante encontrada (servidor) o desde una postulación del tracker.
@@ -149,6 +152,17 @@ export default function Preparar({ vacanteId, postulacionId }: Props) {
       setCopiado(que);
     } catch {
       setCopiado(null);
+    }
+  }
+
+  async function guardarWord() {
+    if (!docs) return;
+    setDocx({ estado: "guardando" });
+    try {
+      const bytes = await cvADocx(docs.cv, docs.idioma);
+      setDocx({ estado: "listo", r: await guardarCvDocx(bytes, nombreCvDocx(docs.cv.basics.name, fuente?.titulo, fuente?.empresa)) });
+    } catch (e) {
+      setDocx({ estado: "error", error: e instanceof Error ? e.message : "No se pudo guardar el CV." });
     }
   }
 
@@ -226,7 +240,27 @@ export default function Preparar({ vacanteId, postulacionId }: Props) {
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">
-                  <Boton onClick={() => window.print()}>Descargar {vista === "cv" ? "CV" : "carta"} en PDF</Boton>
+                  {vista === "cv" && (
+                    <>
+                      <Boton onClick={() => void guardarWord()} disabled={docx?.estado === "guardando"}>
+                        {docx?.estado === "guardando" ? "Guardando…" : "Guardar CV en Word (.docx)"}
+                      </Boton>
+                      {docx?.estado === "listo" && (
+                        <p className="text-xs text-ok" role="status">
+                          {docx.r.enCarpetaDelDia ? (
+                            <>
+                              Sube este: <span className="break-all font-medium">{docx.r.ruta ?? "Descargas, carpeta del día"}</span>
+                              {docx.r.borrados > 0 && ` · Borré ${docx.r.borrados} CV de días anteriores.`}
+                            </>
+                          ) : (
+                            "Quedó en tu carpeta Descargas. Con la extensión 1.0.3 se guarda en su carpeta del día (CV<mes>-<día>) y se limpian los viejos."
+                          )}
+                        </p>
+                      )}
+                      {docx?.estado === "error" && <p className="text-xs text-riesgo" role="alert">{docx.error}</p>}
+                    </>
+                  )}
+                  <Boton variante={vista === "cv" ? "secundario" : undefined} onClick={() => window.print()}>Descargar {vista === "cv" ? "CV" : "carta"} en PDF</Boton>
                   <Boton variante="secundario" onClick={() => void copiar(vista === "cv" ? cvATexto(docs.cv, docs.idioma) : textoCarta, vista)}>
                     Copiar {vista === "cv" ? "CV" : "carta"} como texto
                   </Boton>
