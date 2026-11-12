@@ -58,6 +58,10 @@ export default function PrivacidadPage() {
           </li>
           <li>En las páginas de tu {APP_NAME} solo avisa que está instalada y recibe la conexión cuando pulsas «Conectar la extensión».</li>
           <li>
+            Cuando pulsas «Guardar CV en Word», guarda ese archivo en tu carpeta Descargas, dentro de una carpeta del día (por ejemplo CV11-11), y borra los CV
+            que ella misma guardó en carpetas de días anteriores a ayer. No lee ni toca ningún otro archivo de tu computadora.
+          </li>
+          <li>
             Guarda en tu navegador (almacenamiento local de la extensión) la dirección de tu {APP_NAME} y un token de conexión. Nada más. Desinstalarla los borra.
           </li>
         </ul>
@@ -116,6 +120,8 @@ export default function PrivacidadPage() {
           {APP_NAME} is a personal job-search assistant. Its Chrome extension fills job application forms (Greenhouse, Lever, Ashby) and freelance proposals
           (Workana, Upwork, Freelancer.com) with your own {APP_NAME} profile, and only when you ask. It never submits anything for you. It talks only to your{" "}
           {APP_NAME} server, stores only that server address and a connection token in the extension&apos;s local storage, and sends your data to no third party.
+          When you click «Guardar CV en Word», it saves that CV to a dated folder inside your Downloads folder and deletes only CVs it saved there more than a
+          day ago (the &quot;downloads&quot; permission); it never reads or touches any other file.
           No data is sold, shared, or used for advertising; there are no analytics or third-party cookies. Data categories handled: personally identifiable
           information (profile used to fill forms), authentication information (connection token), web history (only the URL and title of the application
           page you submit), user activity (only the click on that form&apos;s submit button) and website content (form questions, your answers to new
