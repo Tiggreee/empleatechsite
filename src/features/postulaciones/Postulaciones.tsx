@@ -78,7 +78,7 @@ export default function Postulaciones() {
         <Estadistica etiqueta="Total" valor={stats.total} />
         <Estadistica etiqueta="Postuladas" valor={stats.postuladas} />
         <Estadistica etiqueta="Tasa de entrevista" valor={pct(stats.tasaEntrevista)} />
-        <Estadistica etiqueta="Días a primera respuesta" valor={stats.diasPromedioRespuesta === null ? "—" : stats.diasPromedioRespuesta} />
+        <Estadistica etiqueta="Días a la entrevista" valor={stats.diasPromedioRespuesta === null ? "—" : stats.diasPromedioRespuesta} />
         <Estadistica etiqueta="Seguimientos pendientes" valor={stats.pendientesSeguimiento} tono={stats.pendientesSeguimiento > 0 ? "riesgo" : undefined} />
       </section>
 

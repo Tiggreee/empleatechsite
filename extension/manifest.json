@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "EmpleaTech",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Llena tus formularios de postulación y tus propuestas freelance con tu perfil de EmpleaTech. Tú revisas y tú envías.",
   "homepage_url": "https://empleatech.site",
   "icons": {
@@ -11,7 +11,8 @@
     "128": "iconos/icono-128.png"
   },
   "permissions": [
-    "storage"
+    "storage",
+    "downloads"
   ],
   "host_permissions": [
     "https://empleatech.site/*",
